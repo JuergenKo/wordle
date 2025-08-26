@@ -42,14 +42,14 @@ class WordleHelperApp(App):
         self.debug_label.text += "\nApp started, loading banner..."
         Logger.info("KivMob: App started, loading banner.")
         try:
-            # Set a callback for when the banner is successfully loaded
-            self.ads.set_banner_callback(self.banner_loaded)
             # Create the banner. This starts the loading process.
             self.ads.new_banner(self.banner_ad_id)
             self.ads.banner_pos = 'bottom'
-            self.debug_label.text += "\nBanner loading started..."
-            Logger.info("KivMob: Banner loading started.")
-            # DO NOT call show_banner() here. Wait for the callback.
+            # Show the banner. It will appear automatically when loaded.
+            self.ads.show_banner()
+            self.debug_label.text += "\nBanner load command sent. Please wait..."
+            Logger.info("KivMob: Banner load command sent (waiting for async load).")
+            
         except Exception as e:
             error_msg = f"\nError in on_start: {e}"
             self.debug_label.text += error_msg
