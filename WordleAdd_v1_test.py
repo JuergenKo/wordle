@@ -42,16 +42,25 @@ class WordleHelperApp(App):
         self.debug_label.text += "\nApp started, loading banner..."
         Logger.info("KivMob: App started, loading banner.")
         try:
-            # Create and show the banner
+            # Set a callback for when the banner is successfully loaded
+            self.ads.set_banner_callback(self.banner_loaded)
+            # Create the banner. This starts the loading process.
             self.ads.new_banner(self.banner_ad_id)
-            self.ads.banner_pos = 'bottom' # Force to bottom
-            self.ads.show_banner()
-            self.debug_label.text += "\nBanner show() command executed."
-            Logger.info("KivMob: Banner show command sent.")
+            self.ads.banner_pos = 'bottom'
+            self.debug_label.text += "\nBanner loading started..."
+            Logger.info("KivMob: Banner loading started.")
+            # DO NOT call show_banner() here. Wait for the callback.
         except Exception as e:
-            error_msg = f"\nError showing banner: {e}"
+            error_msg = f"\nError in on_start: {e}"
             self.debug_label.text += error_msg
             Logger.error(error_msg)
+
+    # Define a new method that will be called when the banner is ready
+    def banner_loaded(self):
+        self.debug_label.text += "\nBanner LOADED! Showing it now."
+        Logger.info("KivMob: Banner loaded callback received.")
+        # NOW it is safe to show the banner
+        self.ads.show_banner()
 
 if __name__ == '__main__':
     WordleHelperApp().run()
