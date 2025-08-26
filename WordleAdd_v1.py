@@ -44,13 +44,13 @@ if sys.platform == 'win32':
 
 
 class WordleSolver:
-    def __init__(self, guess_words_file="words_choose.txt", solution_words_file="solutions.txt"):
-        self.guess_words = self.load_words(guess_words_file)
+    def __init__(self, solution_words_file="solutions.txt"):
+        self.guess_words = self.load_words(solution_words_file)
         self.solution_words = self.load_words(solution_words_file)
         self.possible_words = self.solution_words.copy()
-        self.best_starting_word = "tares"  # Best starting word
+        self.best_starting_word = "raise"  # Best starting word
         self.guess_history = []  # Store history of guesses and feedback
-        self.current_guess = "tares"  # Track the current guess
+        self.current_guess = "raise"  # Track the current guess
         self.known_letters = {}  # position: letter
         self.excluded_letters = set()
         self.included_letters = {}  # letter: positions where it can't be
@@ -253,7 +253,7 @@ class WordleSolver:
         self.excluded_letters = set()
         self.included_letters = {}
         self.guess_history = []
-        self.current_guess = "tares"
+        self.current_guess = "raise"
         return True
 
 class FeedbackButton(Button):
@@ -445,19 +445,10 @@ class WordleHelperApp(App):
                 Clock.schedule_once(self.fix_window_size, 0.1)
 
     def build(self):
-   
-        self.ads = KivMob('ca-app-pub-3940256099942544~3347511713')
-        # Use the TEST Banner ID
-        self.banner_ad_id = 'ca-app-pub-3940256099942544/6300978111'
-   
-        if sys.platform == 'android':
-             print(f"Initial Window size: {Window.size}")
-             print(f"System size: {Window.system_size}")
-             print(f"Fullscreen setting: {Window.fullscreen}")
-             Clock.schedule_once(self.debug_window_info, 0.1)
-             Clock.schedule_once(self.fix_window_size, 0.5)
-
-        Window.bind(on_resize=self.on_window_resize)
+        Logger.info("KivMob: Initializing AdMob...")
+        self.debug_label = Label(text="Initializing...", size_hint_y=None, height=100, color=(1, 0, 0, 1))
+        self.debug_label.text_size = (self.debug_label.width, None)
+        
         self.solver = WordleSolver()
         self.title = "Wordle Helper"
         self._processing = False  # Add this line
@@ -467,9 +458,15 @@ class WordleHelperApp(App):
             Window.clearcolor = (0.95, 0.95, 0.95, 1)
         except:
             pass
-        
-        # Main layout
+
+        # Create the main layout
         layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
+        
+        # === 1. FIRST: Add the debug label at the very top ===
+        layout.add_widget(self.debug_label)
+        
+        # === 2. SECOND: Add ALL of your app content in the middle ===
+        # This should be the main scrollable content of your app
         
         # Title with adaptive font size
         title = Label(
@@ -493,7 +490,7 @@ class WordleHelperApp(App):
         
         # Current guess display
         self.current_guess_label = Label(
-            text=f"Current guess: TARES", 
+            text=f"Current guess: RAISE", 
             size_hint_y=0.05,
             font_size=sp(18),
             color=(0.2, 0.5, 0.2, 1),
@@ -512,15 +509,8 @@ class WordleHelperApp(App):
         layout.add_widget(step2_label)
         
         # Feedback buttons
-  
-
-        # ... your existing code ...
-        
-        # Replace your current feedback_layout code with this:
         anchor_layout = AnchorLayout(anchor_x='center', size_hint_y=0.12)
         feedback_layout = GridLayout(cols=5, size_hint=(None, 1), spacing=5)
-        
-        # Calculate total width: (5 buttons * 60sp) + (4 gaps * 5sp)
         feedback_layout.width = sp(60) * 5 + sp(5) * 4
         
         self.feedback_buttons = []
@@ -536,16 +526,15 @@ class WordleHelperApp(App):
             feedback_layout.add_widget(btn)
         
         anchor_layout.add_widget(feedback_layout)
-        layout.add_widget(anchor_layout)  # ✅ This will be centered
+        layout.add_widget(anchor_layout)
                 
         # Feedback legend
-    
         legend_layout = BoxLayout(
             orientation='horizontal', 
             size_hint_y=0.04, 
             spacing=5,
-            pos_hint={'center_x': 0.5}  # ✅ Center horizontally
-            )       
+            pos_hint={'center_x': 0.5}
+        )       
         legend_layout.add_widget(Label(
             text="X: Not in word", 
             size_hint_x=0.33, 
@@ -636,19 +625,49 @@ class WordleHelperApp(App):
         
         # Status label
         self.status_label = Label(
-            text=f"Click on 'TARES' to start, then set feedback colors", 
+            text=f"Click on 'raise' to start, then set feedback colors", 
             size_hint_y=0.04,
             color=(0.3, 0.3, 0.3, 1),
             font_size=sp(14)
         )
         layout.add_widget(self.status_label)
+
+        # === 3. LAST: Add the banner space at the very bottom ===
+        # This ensures it stays visible at the bottom of the screen
+        banner_space = Label(text="[Banner Space - Bottom]", size_hint_y=None, height=sp(50), color=(0, 0, 1, 1))
+        layout.add_widget(banner_space)
+
+        # Now initialize KivMob
+        try:
+            self.ads = KivMob('ca-app-pub-3940256099942544~3347511713') # TEST ID
+            self.banner_ad_id = 'ca-app-pub-3940256099942544/6300978111' # TEST ID
+            self.debug_label.text = "KivMob initialized successfully."
+            Logger.info("KivMob: Initialized successfully.")
+        except Exception as e:
+            error_msg = f"Failed to init KivMob: {e}"
+            self.debug_label.text = error_msg
+            Logger.error(error_msg)
         
         return layout
     
     def on_start(self):
         """Handle window focus for proper fullscreen"""
-        self.ads.new_banner(self.banner_ad_id)
-        self.ads.show_banner()
+        self.debug_label.text += "\nApp started, loading banner..."
+        try:
+             # Create the banner. This starts the loading process.
+             self.ads.new_banner(self.banner_ad_id)
+             self.ads.banner_pos = 'bottom'
+             # Show the banner. It will appear automatically when loaded.
+             self.ads.show_banner()
+             self.debug_label.text += "\nBanner load command sent. Please wait..."
+             Logger.info("KivMob: Banner load command sent (waiting for async load).")
+             
+        except Exception as e:
+            error_msg = f"\nError in on_start: {e}"
+            self.debug_label.text += error_msg
+            Logger.error(error_msg)
+        
+        
         Window.bind(on_keyboard=self.on_keyboard)
         Window.bind(focus=self.on_window_focus)
         
@@ -673,7 +692,7 @@ class WordleHelperApp(App):
     
     
     def show_initial_suggestions(self):
-        """Show initial suggestions starting with 'TARES'"""
+        """Show initial suggestions starting with 'raise'"""
         self.suggestions_layout.clear_widgets()
         
         # Start with the best starting word
@@ -681,7 +700,7 @@ class WordleHelperApp(App):
         
         # Add some  suggestions from the default list
   
-        initial_suggestions.extend(['rates','aloes','aeons'])
+        initial_suggestions.extend(['arise','arise','alter'])
   
         
         # Display all suggestions in a single list
@@ -901,8 +920,8 @@ class WordleHelperApp(App):
             # Show initial suggestions again
             self.show_initial_suggestions()
             # Reset current guess display
-            self.current_guess_label.text = f"Current guess: TARES"
-            self.status_label.text = "Solver reset. Click on 'TARES' to start."
+            self.current_guess_label.text = f"Current guess: raise"
+            self.status_label.text = "Solver reset. Click on 'raise' to start."
         else:
             self.status_label.text = "Error resetting solver."
 
