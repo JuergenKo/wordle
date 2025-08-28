@@ -458,9 +458,12 @@ class WordleHelperApp(MDApp):
             try:
                 from kivmob import KivMob
                 self.ads = KivMob("ca-app-pub-3940256099942544~3347511713")  # Test app ID
-                self.banner_ad_id = "ca-app-pub-3940256099942544/6300978111"  # Test banner unit
+                self.ads.new_banner("ca-app-pub-3940256099942544/6300978111", top_pos=False)
+                self.ads.show_banner()
             except Exception as e:
                 print(f"Could not init KivMob: {e}")
+                
+ 
 
         Logger.info("KivMob: Initializing AdMob...")
 
