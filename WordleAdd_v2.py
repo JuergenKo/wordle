@@ -451,10 +451,10 @@ class WordleHelperApp(MDApp):
 
     def build(self):
         
-        self.ads = None
+ 
         # Initialize Ads
         self.ads = None
-        if sys.platform == "android":
+        if platform == "android":
             try:
                 from kivmob import KivMob
                 self.ads = KivMob("ca-app-pub-3940256099942544~3347511713")  # Test app ID
@@ -667,6 +667,8 @@ class WordleHelperApp(MDApp):
     def on_start(self):
         """Handle window focus for proper fullscreen"""
         self.debug_label.text += "\nApp started, loading banner..."
+
+        Logger.info(f"KivMob: ads object at start = {self.ads}")
 
         if self.ads:
             try:
