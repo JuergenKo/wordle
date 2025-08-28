@@ -669,23 +669,16 @@ class WordleHelperApp(MDApp):
         self.debug_label.text += "\nApp started, loading banner..."
 
         Logger.info(f"KivMob: ads object at start = {self.ads}")
-
-        if self.ads:
+        if platform == "android" and self.ads:
             try:
-                self.ads.init()
-                Logger.info("KivMob: init() done")
-                
+                # Create a new banner at bottom
                 self.ads.new_banner(self.banner_ad_id, top_pos=False)
-                Logger.info("KivMob: new_banner() done")
                 
+                # Request and show banner
                 self.ads.request_banner()
-                Logger.info("KivMob: request_banner() sent")
-                
                 self.ads.show_banner()
-                Logger.info("KivMob: show_banner() called")
-
                 
-  
+                print("Banner requested and showing...")
             except Exception as e:
                 print(f"Failed to show banner: {e}")
         
