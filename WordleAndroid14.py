@@ -32,6 +32,7 @@ from kivy.uix.scrollview import ScrollView
 from kivy.metrics import sp
 from kivy.graphics import Color, Rectangle
 from kivy.uix.anchorlayout import AnchorLayout
+from kivy.resources import resource_find
 
 # Fix for Windows pen/touchscreen issue
 if sys.platform == 'win32':
@@ -57,14 +58,20 @@ class WordleSolver:
         self.excluded_letters = set()
         self.included_letters = {}  # letter: positions where it can't be
         print("There are ",len(self.solution_words)," Solutions and ",len(self.guess_words)," guess words")
+    
+    
+    
     def load_words(self, filename):
         """Load words from a file, one word per line"""
+        file = resource_find(filename)
         try:
-            with open(filename, 'r') as f:
+            with open(file, 'r') as f:
                 return [line.strip().upper() for line in f if line.strip()]
         except FileNotFoundError:
             print(f"Warning: File {filename} not found. Using empty word list.")
             return []
+        
+
     
   
    
