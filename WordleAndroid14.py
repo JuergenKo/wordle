@@ -43,9 +43,12 @@ if sys.platform == 'win32':
 
 class WordleSolver:
     def __init__(self, guess_words_file="words_choose.txt", solution_words_file="solutions.txt"):
+        print("Debug WordleSolver init")
         self.solution_words = self.load_words(solution_words_file)
+        print("Debug load solut")
        # self.guess_words = self.load_words(guess_words_file)
         self.guess_words = self.solution_words
+        print("Debug guess init")
         self.possible_words = self.solution_words.copy()
         self.best_starting_word = "RAISE"  # Best starting word
         self.guess_history = []  # Store history of guesses and feedback
@@ -54,7 +57,6 @@ class WordleSolver:
         self.excluded_letters = set()
         self.included_letters = {}  # letter: positions where it can't be
         print("There are ",len(self.solution_words)," Solutions and ",len(self.guess_words)," guess words")
-    
     def load_words(self, filename):
         """Load words from a file, one word per line"""
         try:
@@ -354,6 +356,7 @@ class ClickableSuggestionLabel(Label):
 class WordleHelperApp(App):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        print("Debug app started")
     
     def debug_window_info(self, dt):
         print(f"Window after 0.1s - Size: {Window.size}, Fullscreen: {Window.fullscreen}")
@@ -801,6 +804,7 @@ class WordleHelperApp(App):
             print("DEBUG: All flags reset")
         
     def get_suggestions(self, instance):
+        print("Debug get suggestions")
         # Show calculating message
         self.suggestions_layout.clear_widgets()
         calculating_label = Label(
@@ -817,7 +821,7 @@ class WordleHelperApp(App):
     
     def calculate_suggestions(self):
         suggestions = self.solver.get_suggestions(10)
-        
+        print("Debug calc suggestions")
         # Clear previous suggestions
         self.suggestions_layout.clear_widgets()
         
@@ -915,4 +919,3 @@ if __name__ == '__main__':
         Clock.schedule_once(lambda dt: setattr(Window, "fullscreen", "auto"), 1)
 
     WordleHelperApp().run()
-
