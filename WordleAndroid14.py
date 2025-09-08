@@ -53,6 +53,7 @@ class WordleSolver:
         self.known_letters = {}  # position: letter
         self.excluded_letters = set()
         self.included_letters = {}  # letter: positions where it can't be
+        print("There are ",len(self.solution_words)," Solutions and ",len(self.guess_words)," guess words")
     
     def load_words(self, filename):
         """Load words from a file, one word per line"""
@@ -914,3 +915,4 @@ if __name__ == '__main__':
         Clock.schedule_once(lambda dt: setattr(Window, "fullscreen", "auto"), 1)
 
     WordleHelperApp().run()
+
