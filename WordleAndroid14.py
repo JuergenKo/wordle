@@ -45,8 +45,8 @@ if sys.platform == 'win32':
 class WordleSolver:
     def __init__(self, guess_words_file="words_choose.txt", solution_words_file="solutions.txt"):
         print("Debug WordleSolver init")
-        self.solution_words = self.load_words(solution_words_file)
         print("Debug load solut")
+        self.solution_words = self.load_words(solution_words_file)
        # self.guess_words = self.load_words(guess_words_file)
         self.guess_words = self.solution_words
         print("Debug guess init")
@@ -60,17 +60,28 @@ class WordleSolver:
         print("There are ",len(self.solution_words)," Solutions and ",len(self.guess_words)," guess words")
     
     
-    
+
     def load_words(self, filename):
         """Load words from a file, one word per line"""
-        file = resource_find(filename)
-        try:
-            with open(file, 'r') as f:
-                return [line.strip().upper() for line in f if line.strip()]
-        except FileNotFoundError:
-            print(f"Warning: File {filename} not found. Using empty word list.")
+        # First, try Android-style (inside assets/)
+        path = resource_find(f"assets/{filename}")
+        if path is None:
+            # Then try desktop-style (file in current folder)
+            if os.path.exists(filename):
+                path = filename
+    
+        print("Resolved path:", path)
+    
+        if path is None:
+            print(f"⚠️ Warning: {filename} not found.")
             return []
-        
+    
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return [line.strip().upper() for line in f if line.strip()]
+        except Exception as e:
+            print(f"⚠️ Error opening {path}: {e}")
+            return []
 
     
   
