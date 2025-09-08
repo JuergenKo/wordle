@@ -467,6 +467,7 @@ class WordleHelperApp(App):
 
     def build(self):
    
+        print("Files in app dir:", os.listdir('.'))
         if sys.platform == 'android':
              print(f"Initial Window size: {Window.size}")
              print(f"System size: {Window.system_size}")
