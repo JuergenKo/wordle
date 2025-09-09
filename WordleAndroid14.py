@@ -47,7 +47,7 @@ class WordleSolver:
         print("Debug WordleSolver init")
         print("Debug load solut")
         self.solution_words = self.load_words(solution_words_file)
-       # self.guess_words = self.load_words(guess_words_file)
+        self.guess_words = self.load_words(guess_words_file)
         self.guess_words = self.solution_words
         print("Debug guess init")
         self.possible_words = self.solution_words.copy()
@@ -61,27 +61,19 @@ class WordleSolver:
     
     
 
+
+
     def load_words(self, filename):
         """Load words from a file, one word per line"""
-        # First, try Android-style (inside assets/)
-        path = resource_find(f"assets/{filename}")
-        if path is None:
-            # Then try desktop-style (file in current folder)
-            if os.path.exists(filename):
-                path = filename
-    
-        print("Resolved path:", path)
-    
-        if path is None:
-            print(f"⚠️ Warning: {filename} not found.")
-            return []
-    
+        file = resource_find(filename)
+        print("Resolved path:", file)
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(file, 'r') as f:
                 return [line.strip().upper() for line in f if line.strip()]
         except Exception as e:
-            print(f"⚠️ Error opening {path}: {e}")
+            print(f"⚠️ Could not load {filename}: {e}")
             return []
+
 
     
   
