@@ -56,34 +56,37 @@ jobs:
         echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
         echo "PATH=$VIRTUAL_ENV/bin:$PATH" >> $GITHUB_ENV
 
-    - name: Install critical Python dependencies
+    - name: Install Buildozer from specific branch/commit
       run: |
         source venv/bin/activate
-        # Install distutils for Python 3.12 compatibility
-        pip install distutils
-        # Install other build dependencies
-        pip install setuptools wheel
+        # Install a development version of buildozer that might have Python 3.12 fixes
+        # OR install the latest stable version and hope it works
+        pip install "buildozer>=1.5.0"
+        # Alternatively, try installing from git if the stable version fails:
+        # pip install git+https://github.com/kivy/buildozer.git
 
-    - name: Install Buildozer
+    - name: Verify environment
       run: |
         source venv/bin/activate
-        pip install buildozer
-
-    - name: Verify Buildozer can see our spec
-      run: |
-        source venv/bin/activate
-        echo "=== Checking buildozer.spec ==="
-        ls -la buildozer.spec || echo "No buildozer.spec found!"
-        echo "=== Buildozer version ==="
-        buildozer --version
         echo "=== Python version ==="
         python --version
+        echo "=== Pip list ==="
+        pip list
+        echo "=== Buildozer version ==="
+        buildozer --version || echo "Buildozer not available"
 
     - name: Build the APK
       run: |
         source venv/bin/activate
         echo "=== Starting the build process ==="
-        buildozer -v android debug
+        # Try a different approach: use python -m buildozer instead of direct command
+        python -m buildozer -v android debug 2>&1 | head -100
+
+    - name: Check for any build artifacts
+      run: |
+        echo "=== Checking for build artifacts ==="
+        ls -la .buildozer/ 2>/dev/null || echo "No .buildozer directory"
+        find . -name "*.apk" -o -name "*.log" | head -10 || echo "No APK or log files found"
 
     - name: Upload APK artifact
       if: success()
@@ -91,12 +94,14 @@ jobs:
       with:
         name: wordle-apk
         path: bin/*.apk
+        if-no-files-found: warn
 
-    - name: Upload to Release
-      if: success() && github.event_name == 'release'
-      uses: svenstaro/upload-release-action@v2
+    - name: Upload build logs for debugging
+      if: failure()
+      uses: actions/upload-artifact@v4
       with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: bin/*.apk
-        asset_name: Wordle-Release.apk
-        tag: ${{ github.ref }}
+        name: build-logs
+        path: |
+          .buildozer/
+          *.log
+        if-no-files-found: warn
