@@ -1,17 +1,14 @@
-name: Build Android APK
+name: Build Android APK with Docker
 
 on:
   push:
     branches: [ "main" ]
-  release:
-    types: [published]
-
-permissions:
-  contents: write
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
+    container:
+      image: kivy/buildozer:latest
 
     steps:
     - name: Checkout code
@@ -26,59 +23,13 @@ jobs:
         echo "=== kv/ directory ==="
         ls -la kv/ || echo "kv/ directory does not exist"
 
-    - name: Install system dependencies
+    - name: Build with Buildozer
       run: |
-        sudo apt-get update -y
-        sudo apt-get install -y git zip unzip openjdk-17-jdk python3 python3-pip python3-venv python3-setuptools autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
-
-    - name: Set up Python Virtual Environment
-      run: |
-        python3 -m venv venv
-        source venv/bin/activate
-        echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
-        echo "PATH=$VIRTUAL_ENV/bin:$PATH" >> $GITHUB_ENV
-
-    - name: Install specific version of Buildozer and dependencies
-      run: |
-        source venv/bin/activate
-        # Install specific compatible versions
-        pip install "cython<3.0"  # Use older Cython version
-        pip install "buildozer==1.5.0"
-        # Install specific python-for-android version that fixes the 'long' issue
-        pip install "python-for-android==2023.8.24"
-
-    - name: Verify environment
-      run: |
-        source venv/bin/activate
-        echo "=== Python version ==="
-        python --version
-        echo "=== Pip list ==="
-        pip list
-        echo "=== Buildozer version ==="
-        buildozer --version
-
-    - name: Build the APK with specific p4a
-      run: |
-        source venv/bin/activate
-        echo "=== Starting the build process ==="
-        # Set environment variable to use the specific python-for-android we installed
-        export PATH=$HOME/.local/bin:$PATH
         buildozer -v android debug
 
     - name: Upload APK artifact
-      if: success()
       uses: actions/upload-artifact@v4
       with:
         name: wordle-apk
         path: bin/*.apk
-        if-no-files-found: warn
-
-    - name: Upload build logs for debugging
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: build-logs
-        path: |
-          .buildozer/
-          *.log
         if-no-files-found: warn
