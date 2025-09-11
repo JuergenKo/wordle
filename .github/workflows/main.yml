@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04  # CHANGED FROM ubuntu-latest to ubuntu-22.04
 
     steps:
     - name: Checkout code
@@ -44,7 +44,7 @@ jobs:
           zlib1g-dev \
           libncurses5-dev \
           libncursesw5-dev \
-          libtinfo6 \
+          libtinfo5 \  # CHANGED BACK to libtinfo5 for Ubuntu 22.04
           cmake \
           libffi-dev \
           libssl-dev
@@ -56,14 +56,10 @@ jobs:
         echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
         echo "PATH=$VIRTUAL_ENV/bin:$PATH" >> $GITHUB_ENV
 
-    - name: Install Buildozer from specific branch/commit
+    - name: Install Buildozer
       run: |
         source venv/bin/activate
-        # Install a development version of buildozer that might have Python 3.12 fixes
-        # OR install the latest stable version and hope it works
-        pip install "buildozer>=1.5.0"
-        # Alternatively, try installing from git if the stable version fails:
-        # pip install git+https://github.com/kivy/buildozer.git
+        pip install buildozer
 
     - name: Verify environment
       run: |
@@ -73,20 +69,13 @@ jobs:
         echo "=== Pip list ==="
         pip list
         echo "=== Buildozer version ==="
-        buildozer --version || echo "Buildozer not available"
+        buildozer --version
 
     - name: Build the APK
       run: |
         source venv/bin/activate
         echo "=== Starting the build process ==="
-        # Try a different approach: use python -m buildozer instead of direct command
-        python -m buildozer -v android debug 2>&1 | head -100
-
-    - name: Check for any build artifacts
-      run: |
-        echo "=== Checking for build artifacts ==="
-        ls -la .buildozer/ 2>/dev/null || echo "No .buildozer directory"
-        find . -name "*.apk" -o -name "*.log" | head -10 || echo "No APK or log files found"
+        buildozer -v android debug
 
     - name: Upload APK artifact
       if: success()
