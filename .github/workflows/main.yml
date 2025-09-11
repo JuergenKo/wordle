@@ -38,6 +38,7 @@ jobs:
           python3-pip \
           python3-venv \
           python3-setuptools \
+          python3-distutils \  # ADDED THIS LINE - CRITICAL FIX
           autoconf \
           libtool \
           pkg-config \
@@ -56,9 +57,12 @@ jobs:
         echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
         echo "PATH=$VIRTUAL_ENV/bin:$PATH" >> $GITHUB_ENV
 
-    - name: Install Buildozer
+    - name: Install Buildozer and critical Python dependencies
       run: |
         source venv/bin/activate
+        # First install distutils for Python 3.12 compatibility
+        pip install distutils
+        # Then install buildozer
         pip install buildozer
 
     - name: Verify Buildozer can see our spec
@@ -83,7 +87,7 @@ jobs:
         path: bin/*.apk
 
     - name: Upload to Release
-      if: success() && github.event_name == 'release'  # FIXED: Added closing quote '
+      if: success() && github.event_name == 'release'
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
