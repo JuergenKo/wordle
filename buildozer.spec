@@ -120,7 +120,8 @@ android.private_storage = True
 android.accept_sdk_license = True
 
 # (str) Android entry point, default is ok for Kivy-based app
-android.entrypoint =  android.py
+android.entrypoint = org.kivy.android.PythonActivity
+android.apptheme = @android:style/Theme.NoTitleBar
 
 # (str) Android app theme, default is ok for Kivy-based app
 android.theme = "@android:style/Theme.NoTitleBar.Fullscreen"
