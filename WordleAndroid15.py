@@ -1,4 +1,4 @@
-
+# Compiles ok with colab WordleApp_v14.ipynb  
 
 import sys
 import os 
@@ -32,6 +32,7 @@ from kivy.uix.scrollview import ScrollView
 from kivy.metrics import sp
 from kivy.graphics import Color, Rectangle
 from kivy.uix.anchorlayout import AnchorLayout
+from kivy.resources import resource_find
 
 # Fix for Windows pen/touchscreen issue
 if sys.platform == 'win32':
@@ -43,24 +44,57 @@ if sys.platform == 'win32':
 
 class WordleSolver:
     def __init__(self, guess_words_file="words_choose.txt", solution_words_file="solutions.txt"):
-        self.guess_words = self.load_words(guess_words_file)
+        print("Debug WordleSolver init")
+        print("Debug load solut")
         self.solution_words = self.load_words(solution_words_file)
+        self.guess_words = self.load_words(guess_words_file)
+        self.guess_words = self.solution_words
+        print("Debug guess init")
         self.possible_words = self.solution_words.copy()
-        self.best_starting_word = "raise"  # Best starting word
+        self.best_starting_word = "RAISE"  # Best starting word
         self.guess_history = []  # Store history of guesses and feedback
-        self.current_guess = "raise"  # Track the current guess
+        self.current_guess = "RAISE"  # Track the current guess
         self.known_letters = {}  # position: letter
         self.excluded_letters = set()
         self.included_letters = {}  # letter: positions where it can't be
+        print("There are ",len(self.solution_words)," Solutions and ",len(self.guess_words)," guess words")
     
+    
+
+
+
     def load_words(self, filename):
         """Load words from a file, one word per line"""
         try:
-            with open(filename, 'r') as f:
-                return [line.strip().lower() for line in f if line.strip()]
-        except FileNotFoundError:
-            print(f"Warning: File {filename} not found. Using empty word list.")
+            # Try multiple approaches to find the file
+            file_path = resource_find(filename)
+            
+            if file_path is None:
+                # On Android, files might be in the app directory
+                from android.storage import app_storage_path
+                app_dir = app_storage_path()
+                file_path = os.path.join(app_dir, filename)
+            
+            if file_path and os.path.exists(file_path):
+                with open(file_path, 'r') as f:
+                    return [line.strip().upper() for line in f if line.strip()]
+            else:
+                # Last resort: try to load from package data
+                import pkgutil
+                try:
+                    data = pkgutil.get_data(__name__, filename)
+                    if data:
+                        content = data.decode('utf-8')
+                        return [line.strip().upper() for line in content.split('\n') if line.strip()]
+                except:
+                    print(f"⚠️ Could not load {filename} from package data")
+                    return []
+                    
+        except Exception as e:
+            print(f"⚠️ Could not load {filename}: {e}")
             return []
+
+
     
   
    
@@ -251,7 +285,7 @@ class WordleSolver:
         self.excluded_letters = set()
         self.included_letters = {}
         self.guess_history = []
-        self.current_guess = "raise"
+        self.current_guess = "RAISE"
         return True
 
 class FeedbackButton(Button):
@@ -352,6 +386,7 @@ class ClickableSuggestionLabel(Label):
 class WordleHelperApp(App):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        print("Debug app started")
     
     def debug_window_info(self, dt):
         print(f"Window after 0.1s - Size: {Window.size}, Fullscreen: {Window.fullscreen}")
@@ -444,6 +479,7 @@ class WordleHelperApp(App):
 
     def build(self):
    
+        print("Files in app dir:", os.listdir('.'))
         if sys.platform == 'android':
              print(f"Initial Window size: {Window.size}")
              print(f"System size: {Window.system_size}")
@@ -630,7 +666,7 @@ class WordleHelperApp(App):
         
         # Status label
         self.status_label = Label(
-            text=f"Click on 'raise' to start, then set feedback colors", 
+            text=f"Click on 'RAISE' to start, then set feedback colors", 
             size_hint_y=0.04,
             color=(0.3, 0.3, 0.3, 1),
             font_size=sp(14)
@@ -665,7 +701,7 @@ class WordleHelperApp(App):
     
     
     def show_initial_suggestions(self):
-        """Show initial suggestions starting with 'raise'"""
+        """Show initial suggestions starting with 'RAISE'"""
         self.suggestions_layout.clear_widgets()
         
         # Start with the best starting word
@@ -673,7 +709,7 @@ class WordleHelperApp(App):
         
         # Add some  suggestions from the default list
   
-        initial_suggestions.extend(['rates','aloes','aeons'])
+        initial_suggestions.extend(['IRATE','ARISE','ALTER'])
   
         
         # Display all suggestions in a single list
@@ -799,6 +835,7 @@ class WordleHelperApp(App):
             print("DEBUG: All flags reset")
         
     def get_suggestions(self, instance):
+        print("Debug get suggestions")
         # Show calculating message
         self.suggestions_layout.clear_widgets()
         calculating_label = Label(
@@ -815,7 +852,7 @@ class WordleHelperApp(App):
     
     def calculate_suggestions(self):
         suggestions = self.solver.get_suggestions(10)
-        
+        print("Debug calc suggestions")
         # Clear previous suggestions
         self.suggestions_layout.clear_widgets()
         
@@ -893,8 +930,8 @@ class WordleHelperApp(App):
             # Show initial suggestions again
             self.show_initial_suggestions()
             # Reset current guess display
-            self.current_guess_label.text = f"Current guess: raise"
-            self.status_label.text = "Solver reset. Click on 'raise' to start."
+            self.current_guess_label.text = f"Current guess: RAISE"
+            self.status_label.text = "Solver reset. Click on 'RAISE' to start."
         else:
             self.status_label.text = "Error resetting solver."
 
