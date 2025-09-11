@@ -26,10 +26,24 @@ jobs:
         echo "=== kv/ directory ==="
         ls -la kv/ || echo "kv/ directory does not exist"
 
-    - name: Install system dependencies
+    - name: Install Java 17 and system dependencies
       run: |
         sudo apt-get update -y
-        sudo apt-get install -y git zip unzip openjdk-17-jdk python3 python3-pip python3-venv python3-setuptools autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+        # Install Java 17 instead of Java 11
+        sudo apt-get install -y openjdk-17-jdk
+        # Set Java 17 as default
+        sudo update-alternatives --set java /usr/lib/jvm/java-17-openjdk-amd64/bin/java
+        sudo update-alternatives --set javac /usr/lib/jvm/java-17-openjdk-amd64/bin/javac
+        # Install other dependencies
+        sudo apt-get install -y git zip unzip python3 python3-pip python3-venv python3-setuptools autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+
+    - name: Verify Java version
+      run: |
+        echo "=== Java Version ==="
+        java -version
+        javac -version
+        echo "=== JAVA_HOME ==="
+        echo $JAVA_HOME
 
     - name: Set up Python Virtual Environment
       run: |
@@ -68,40 +82,29 @@ jobs:
         fi
         echo "kv/ directory found"
 
-    - name: Build the APK with manual recovery
+    - name: Build the APK
       run: |
         source venv/bin/activate
         echo "=== Starting the build process ==="
         
-        # Try the normal build first
-        buildozer -v android debug 2>&1 | tee build.log || echo "Build may have failed, checking for partial success"
+        # Clean previous build
+        buildozer android clean || echo "Clean may have failed, continuing..."
         
-        # If gradlew failed, try to run it manually with more memory
-        if grep -q "gradlew failed" build.log; then
-          echo "=== Gradle failed, attempting manual recovery ==="
-          cd .buildozer/android/platform/build-arm64-v8a_armeabi-v7a/dists/wordle
-          chmod +x gradlew
-          # Try with more memory allocation
-          ./gradlew clean assembleDebug -Dorg.gradle.jvmargs="-Xmx2048m" 2>&1 | tee gradle.log || echo "Gradle build may have failed"
-          cd ../../../../..
-        fi
+        # Build with Java 17 environment
+        JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 buildozer -v android debug 2>&1 | tee build.log || echo "Build completed or may have warnings"
         
-        # Check if APK was created despite possible failures
+        # Check if APK was created
         echo "=== Searching for APK files ==="
         find . -name "*.apk" -type f 2>/dev/null | head -10 || echo "No APK files found in search"
-        
-        # Specifically check the build outputs directory
-        if [ -d ".buildozer/android/platform/build-arm64-v8a_armeabi-v7a/dists/wordle/build/outputs/apk" ]; then
-          echo "=== Checking Gradle build outputs ==="
-          ls -la .buildozer/android/platform/build-arm64-v8a_armeabi-v7a/dists/wordle/build/outputs/apk/ || echo "Cannot list apk outputs"
-          # Copy any found APK to the bin directory
-          cp .buildozer/android/platform/build-arm64-v8a_armeabi-v7a/dists/wordle/build/outputs/apk/*.apk bin/ 2>/dev/null || echo "No APK to copy"
-        fi
         
         # Check the bin directory
         if [ -d "bin" ]; then
           echo "=== Contents of bin/ directory ==="
           ls -la bin/ || echo "bin directory exists but cannot list contents"
+          if ls bin/*.apk 1> /dev/null 2>&1; then
+            echo "SUCCESS: APK file found in bin/ directory!"
+            ls -la bin/*.apk
+          fi
         fi
 
     - name: Upload APK artifact if exists
@@ -111,7 +114,6 @@ jobs:
         name: wordle-apk
         path: |
           bin/*.apk
-          .buildozer/android/platform/build-arm64-v8a_armeabi-v7a/dists/wordle/build/outputs/apk/*.apk
           *.apk
         if-no-files-found: ignore
 
@@ -122,7 +124,6 @@ jobs:
         name: build-logs
         path: |
           build.log
-          gradle.log
           .buildozer/
         if-no-files-found: warn
 
@@ -137,7 +138,6 @@ jobs:
           exit 0
         else
           echo "❌ BUILD FAILED: No APK file was produced"
-          echo "The build failed during the Gradle packaging step."
-          echo "Check the build.log and gradle.log for details."
+          echo "Check the build.log for details."
           exit 1
         fi
