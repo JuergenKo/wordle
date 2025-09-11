@@ -44,7 +44,7 @@ jobs:
           zlib1g-dev \
           libncurses5-dev \
           libncursesw5-dev \
-          libtinfo5 \
+          libtinfo6 \  # CHANGED FROM libtinfo5 to libtinfo6
           cmake \
           libffi-dev \
           libssl-dev
@@ -73,7 +73,6 @@ jobs:
       run: |
         source venv/bin/activate
         echo "=== Starting the build process ==="
-        # This is the only command you need: build the APK
         buildozer -v android debug
 
     - name: Upload APK artifact
@@ -84,7 +83,7 @@ jobs:
         path: bin/*.apk
 
     - name: Upload to Release
-      if: success() && github.event_name == 'release'
+      if: success() && github.event_name == 'release
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
