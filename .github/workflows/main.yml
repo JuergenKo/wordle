@@ -68,29 +68,40 @@ jobs:
         fi
         echo "kv/ directory found"
 
-    - name: Build the APK with extended timeout
+    - name: Build the APK with manual recovery
       run: |
         source venv/bin/activate
-        echo "=== Starting the build process (3-hour timeout) ==="
-        # Use a much longer timeout - 3 hours for complete build
-        timeout 10800 buildozer -v android debug 2>&1 | tee build.log || echo "Build completed or timed out"
+        echo "=== Starting the build process ==="
         
-        # Check if APK was created despite possible timeout
+        # Try the normal build first
+        buildozer -v android debug 2>&1 | tee build.log || echo "Build may have failed, checking for partial success"
+        
+        # If gradlew failed, try to run it manually with more memory
+        if grep -q "gradlew failed" build.log; then
+          echo "=== Gradle failed, attempting manual recovery ==="
+          cd .buildozer/android/platform/build-arm64-v8a_armeabi-v7a/dists/wordle
+          chmod +x gradlew
+          # Try with more memory allocation
+          ./gradlew clean assembleDebug -Dorg.gradle.jvmargs="-Xmx2048m" 2>&1 | tee gradle.log || echo "Gradle build may have failed"
+          cd ../../../../..
+        fi
+        
+        # Check if APK was created despite possible failures
         echo "=== Searching for APK files ==="
         find . -name "*.apk" -type f 2>/dev/null | head -10 || echo "No APK files found in search"
         
-        # Specifically check the bin directory
+        # Specifically check the build outputs directory
+        if [ -d ".buildozer/android/platform/build-arm64-v8a_armeabi-v7a/dists/wordle/build/outputs/apk" ]; then
+          echo "=== Checking Gradle build outputs ==="
+          ls -la .buildozer/android/platform/build-arm64-v8a_armeabi-v7a/dists/wordle/build/outputs/apk/ || echo "Cannot list apk outputs"
+          # Copy any found APK to the bin directory
+          cp .buildozer/android/platform/build-arm64-v8a_armeabi-v7a/dists/wordle/build/outputs/apk/*.apk bin/ 2>/dev/null || echo "No APK to copy"
+        fi
+        
+        # Check the bin directory
         if [ -d "bin" ]; then
           echo "=== Contents of bin/ directory ==="
           ls -la bin/ || echo "bin directory exists but cannot list contents"
-          if ls bin/*.apk 1> /dev/null 2>&1; then
-            echo "SUCCESS: APK file found in bin/ directory!"
-            ls -la bin/*.apk
-          else
-            echo "No APK files found in bin/ directory"
-          fi
-        else
-          echo "bin/ directory does not exist"
         fi
 
     - name: Upload APK artifact if exists
@@ -100,6 +111,7 @@ jobs:
         name: wordle-apk
         path: |
           bin/*.apk
+          .buildozer/android/platform/build-arm64-v8a_armeabi-v7a/dists/wordle/build/outputs/apk/*.apk
           *.apk
         if-no-files-found: ignore
 
@@ -110,6 +122,7 @@ jobs:
         name: build-logs
         path: |
           build.log
+          gradle.log
           .buildozer/
         if-no-files-found: warn
 
@@ -124,6 +137,7 @@ jobs:
           exit 0
         else
           echo "❌ BUILD FAILED: No APK file was produced"
-          echo "Check the build.log and uploaded artifacts for details"
+          echo "The build failed during the Gradle packaging step."
+          echo "Check the build.log and gradle.log for details."
           exit 1
         fi
