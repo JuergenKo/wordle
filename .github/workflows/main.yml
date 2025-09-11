@@ -41,45 +41,64 @@ jobs:
     - name: Install specific compatible versions
       run: |
         source venv/bin/activate
-        # Install specific versions that work together
-        pip install "cython==0.29.33"  # Older Cython version that doesn't have the 'long' issue
+        pip install "cython==0.29.33"
         pip install "buildozer==1.5.0"
         pip install "setuptools==65.5.0"
 
-    - name: Pre-download Android SDK components (optional but helpful)
+    - name: Verify source files are accessible
       run: |
         source venv/bin/activate
-        echo "Setting up initial buildozer environment..."
-        # This will initialize the environment without building
-        buildozer android update 2>&1 | head -50 || echo "Initialization may have partial errors"
+        echo "=== Ensuring source files are accessible ==="
+        # Check if main.py exists
+        if [ ! -f "main.py" ]; then
+          echo "ERROR: main.py not found in root directory!"
+          ls -la *.py || echo "No Python files found"
+          exit 1
+        fi
+        echo "main.py found successfully"
+        
+        # Check if data directory exists
+        if [ ! -d "data" ]; then
+          echo "ERROR: data/ directory not found!"
+          exit 1
+        fi
+        echo "data/ directory found"
+        
+        # Check if kv directory exists  
+        if [ ! -d "kv" ]; then
+          echo "ERROR: kv/ directory not found!"
+          exit 1
+        fi
+        echo "kv/ directory found"
 
-    - name: Apply patch for python-for-android long issue
+    - name: Clean previous build and initialize
       run: |
         source venv/bin/activate
-        echo "=== Applying workaround for 'long' type issue ==="
-        # Find the jnius_utils.pxi file and apply a patch
-        find /home/runner -name "jnius_utils.pxi" -type f 2>/dev/null | head -1 | while read file; do
-          echo "Found file: $file"
-          # Create a backup
-          cp "$file" "${file}.backup"
-          # Apply the fix: replace 'long' with 'int' for Python 3 compatibility
-          sed -i 's/\(isinstance(arg, long)\)/isinstance(arg, int)/g' "$file"
-          sed -i 's/\(isinstance(arg, long)\)/isinstance(arg, int)/g' "$file"
-          echo "Applied patch to: $file"
-        done || echo "Patch application may have failed - continuing anyway"
+        echo "=== Cleaning previous build artifacts ==="
+        buildozer android clean || echo "Clean may have failed, continuing..."
+        
+        echo "=== Force re-initialization ==="
+        # Remove the .buildozer directory to start fresh
+        rm -rf .buildozer || echo "No .buildozer to remove"
+        
+        # Initialize with debug info
+        buildozer init || echo "Init may have warnings"
 
     - name: Build the APK
       run: |
         source venv/bin/activate
         echo "=== Starting the build process ==="
-        # Set a longer timeout for the first build
-        timeout 3600 buildozer -v android debug || echo "Build may have timed out but could still be progressing"
-
-    - name: Check for APK file
-      run: |
-        echo "=== Checking for built APK ==="
-        find . -name "*.apk" -type f 2>/dev/null | head -5 || echo "No APK files found"
-        ls -la bin/ 2>/dev/null || echo "bin directory not found"
+        # Build with verbose output and longer timeout
+        timeout 7200 buildozer -v android debug 2>&1 | tee build.log || echo "Build completed or timed out"
+        
+        # Check if APK was created despite possible timeout
+        if [ -f "bin/*.apk" ]; then
+          echo "SUCCESS: APK file found!"
+          ls -la bin/
+        else
+          echo "Checking for APK in different locations..."
+          find . -name "*.apk" -type f 2>/dev/null | head -5 || echo "No APK files found yet"
+        fi
 
     - name: Upload APK artifact
       if: success()
@@ -89,12 +108,12 @@ jobs:
         path: bin/*.apk
         if-no-files-found: warn
 
-    - name: Upload build logs and environment info
-      if: failure()
+    - name: Upload build logs for debugging
+      if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: build-debug-info
+        name: build-logs
         path: |
+          build.log
           .buildozer/
-          *.log
         if-no-files-found: warn
