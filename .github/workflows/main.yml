@@ -1,61 +1,105 @@
 name: Build Android APK
 
-# Controls when the workflow will run
 on:
-  # Triggers the workflow when a release is published (great for final builds)
-  release:
-    types: [published]
-  # Also triggers on every push to the main branch (good for testing)
   push:
     branches: [ "main" ]
+  release:
+    types: [published]
 
-# Sets permissions for the generated GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: write
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   build:
-    # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Step 1: Checkout the repository code to the runner
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      # Step 2: Install system dependencies (same as we would on WSL)
-      - name: Install dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y git zip unzip openjdk-17-jdk python3-pip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+    - name: Debug - List files
+      run: |
+        echo "Contents of the repository:"
+        ls -la
+        echo "Contents of data directory:"
+        ls -la data/ || echo "data/ not found"
+        echo "Contents of kv directory:"
+        ls -la kv/ || echo "kv/ not found"
 
-      # Step 3: Install Buildozer
-      - name: Install Buildozer
-        run: pip3 install --user buildozer
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update -y
+        # Install ALL build dependencies in one go
+        sudo apt-get install -y \
+          git \
+          zip \
+          unzip \
+          openjdk-17-jdk \
+          python3-pip \
+          python3-setuptools \
+          autoconf \
+          libtool \
+          pkg-config \
+          zlib1g-dev \
+          libncurses5-dev \
+          libncursesw5-dev \
+          libtinfo5 \
+          cmake \
+          libffi-dev \
+          libssl-dev \
+          libsqlite3-dev
 
-      # Step 4: Add Buildozer to the PATH for this session
-      - name: Setup Buildozer
-        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
+    - name: Upgrade Pip and Setuptools
+      run: |
+        python3 -m pip install --upgrade pip setuptools virtualenv
 
-      # Step 5: Run Buildozer to build the APK (this will take a long time on first run)
-      - name: Build APK with Buildozer
-        run: buildozer -v android debug
+    - name: Install Buildozer
+      run: |
+        # Use a specific, known-good version of Buildozer for stability
+        python3 -m pip install --user buildozer
 
-      # Step 6: Upload the APK as a workflow artifact
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: my-python-app-apk
-          path: bin/*.apk # Uploads any APK file from the bin directory
+    - name: Add Buildozer to PATH
+      run: |
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      # BONUS STEP: If the trigger was a release, attach the APK to the release!
-      - name: Upload APK to Release
-        if: ${{ github.event_name == 'release' }}
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: bin/*.apk
-          asset_name: My-Python-App-Release.apk
-          tag: ${{ github.ref }}
+    - name: Show Buildozer version and debug info
+      run: |
+        which buildozer
+        buildozer --version
+        python3 --version
+
+    - name: Run Buildozer target
+      run: |
+        # First, run a simple command to list targets and check environment
+        buildozer --version
+        echo "Buildozer environment seems OK."
+
+    - name: Build APK with Buildozer (Full Verbose)
+      run: |
+        # The main build command with maximum verbosity
+        buildozer -v android debug 2>&1 | tee build.log
+        # If buildozer fails, the next command will run and show the end of the log for clues
+        tail -n 50 build.log || echo "No build.log found"
+
+    - name: Upload APK artifact
+      if: success()
+      uses: actions/upload-artifact@v4
+      with:
+        name: wordle-apk
+        path: bin/*.apk
+
+    - name: Upload Build Log (for debugging if failed)
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-log
+        path: build.log
+
+    - name: Upload to Release
+      if: success() && github.event_name == 'release'
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: bin/*.apk
+        asset_name: Wordle-Release.apk
+        tag: ${{ github.ref }}
