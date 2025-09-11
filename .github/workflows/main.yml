@@ -38,6 +38,12 @@ jobs:
         echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
         echo "PATH=$VIRTUAL_ENV/bin:$PATH" >> $GITHUB_ENV
 
+    - name: Install Python build dependencies
+      run: |
+        source venv/bin/activate
+        # Install Cython and other build dependencies
+        pip install cython setuptools wheel
+
     - name: Install Buildozer
       run: |
         source venv/bin/activate
@@ -52,6 +58,8 @@ jobs:
         pip list
         echo "=== Buildozer version ==="
         buildozer --version
+        echo "=== Cython check ==="
+        python -c "import cython; print('Cython version:', cython.__version__)" || echo "Cython not available"
 
     - name: Build the APK
       run: |
