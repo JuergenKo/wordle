@@ -38,7 +38,6 @@ jobs:
           python3-pip \
           python3-venv \
           python3-setuptools \
-          python3-distutils \  # ADDED THIS LINE - CRITICAL FIX
           autoconf \
           libtool \
           pkg-config \
@@ -57,12 +56,17 @@ jobs:
         echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
         echo "PATH=$VIRTUAL_ENV/bin:$PATH" >> $GITHUB_ENV
 
-    - name: Install Buildozer and critical Python dependencies
+    - name: Install critical Python dependencies
       run: |
         source venv/bin/activate
-        # First install distutils for Python 3.12 compatibility
+        # Install distutils for Python 3.12 compatibility
         pip install distutils
-        # Then install buildozer
+        # Install other build dependencies
+        pip install setuptools wheel
+
+    - name: Install Buildozer
+      run: |
+        source venv/bin/activate
         pip install buildozer
 
     - name: Verify Buildozer can see our spec
@@ -72,6 +76,8 @@ jobs:
         ls -la buildozer.spec || echo "No buildozer.spec found!"
         echo "=== Buildozer version ==="
         buildozer --version
+        echo "=== Python version ==="
+        python --version
 
     - name: Build the APK
       run: |
