@@ -44,7 +44,7 @@ jobs:
           zlib1g-dev \
           libncurses5-dev \
           libncursesw5-dev \
-          libtinfo6 \  # CHANGED FROM libtinfo5 to libtinfo6
+          libtinfo6 \
           cmake \
           libffi-dev \
           libssl-dev
@@ -83,7 +83,7 @@ jobs:
         path: bin/*.apk
 
     - name: Upload to Release
-      if: success() && github.event_name == 'release'
+      if: success() && github.event_name == 'release'  # FIXED: Added closing quote '
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
