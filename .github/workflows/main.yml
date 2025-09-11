@@ -1,8 +1,10 @@
-name: Build Android APK - DEBUG
+name: Build Android APK
 
 on:
   push:
     branches: [ "main" ]
+  release:
+    types: [published]
 
 permissions:
   contents: write
@@ -23,8 +25,6 @@ jobs:
         ls -la data/ || echo "data/ directory does not exist"
         echo "=== kv/ directory ==="
         ls -la kv/ || echo "kv/ directory does not exist"
-        echo "=== .github/workflows/ directory ==="
-        ls -la .github/workflows/
 
     - name: Install system dependencies
       run: |
@@ -37,56 +37,57 @@ jobs:
           python3 \
           python3-pip \
           python3-venv \
-          python3-setuptools
+          python3-setuptools \
+          autoconf \
+          libtool \
+          pkg-config \
+          zlib1g-dev \
+          libncurses5-dev \
+          libncursesw5-dev \
+          libtinfo5 \
+          cmake \
+          libffi-dev \
+          libssl-dev
 
-    - name: Create and use a Python Virtual Environment
+    - name: Set up Python Virtual Environment
       run: |
         python3 -m venv venv
         source venv/bin/activate
         echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
         echo "PATH=$VIRTUAL_ENV/bin:$PATH" >> $GITHUB_ENV
 
-    - name: Install Buildozer in Virtual Environment
+    - name: Install Buildozer
       run: |
         source venv/bin/activate
-        which python
-        which pip
-        python --version
-        pip --version
-        # Install a specific, known-stable version of Buildozer
-        pip install buildozer==1.5.0
-        pip list | grep buildozer
+        pip install buildozer
 
-    - name: Verify Buildozer Installation
+    - name: Verify Buildozer can see our spec
       run: |
         source venv/bin/activate
-        echo "=== Which buildozer? ==="
-        which buildozer || echo "buildozer command not found!"
+        echo "=== Checking buildozer.spec ==="
+        ls -la buildozer.spec || echo "No buildozer.spec found!"
         echo "=== Buildozer version ==="
-        buildozer --version || echo "Failed to get buildozer version"
-        echo "=== Check if buildozer can run ==="
-        buildozer --help | head -5 || echo "buildozer --help failed"
+        buildozer --version
 
-    - name: Initialize Buildozer (Critical First Step)
+    - name: Build the APK
       run: |
         source venv/bin/activate
-        echo "=== Running buildozer init ==="
-        # This creates the initial .buildozer folder and checks the environment
-        buildozer init || echo "buildozer init failed with code $?"
-        echo "=== Contents after init ==="
-        ls -la .buildozer/ || echo ".buildozer folder does not exist"
+        echo "=== Starting the build process ==="
+        # This is the only command you need: build the APK
+        buildozer -v android debug
 
-    - name: Attempt APK Build
-      run: |
-        source venv/bin/activate
-        echo "=== Starting buildozer android debug ==="
-        # Try a dry-run or just the first target to see where it fails
-        buildozer -v android debug 2>&1 | head -100
-        # The above will show the first 100 lines of output
+    - name: Upload APK artifact
+      if: success()
+      uses: actions/upload-artifact@v4
+      with:
+        name: wordle-apk
+        path: bin/*.apk
 
-    - name: Check for any generated files
-      run: |
-        echo "=== Checking for any build artifacts ==="
-        ls -la bin/ || echo "bin/ directory does not exist"
-        ls -la .buildozer/ || echo ".buildozer directory does not exist"
-        find . -name "*.apk" -o -name "*.log" | head -10 || echo "No APK or log files found"
+    - name: Upload to Release
+      if: success() && github.event_name == 'release'
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: bin/*.apk
+        asset_name: Wordle-Release.apk
+        tag: ${{ github.ref }}
