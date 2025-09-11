@@ -1,119 +1,74 @@
-name: Build Android APK
-
-on:
-  push:
-    branches: [ "main" ]
-  release:
-    types: [published]
-
-permissions:
-  contents: write
-
-jobs:
-  build:
-    runs-on: ubuntu-22.04
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Debug - List repository files
-      run: |
-        echo "=== Repository Structure ==="
-        ls -la
-        echo "=== data/ directory ==="
-        ls -la data/ || echo "data/ directory does not exist"
-        echo "=== kv/ directory ==="
-        ls -la kv/ || echo "kv/ directory does not exist"
-
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update -y
-        sudo apt-get install -y git zip unzip openjdk-17-jdk python3 python3-pip python3-venv python3-setuptools autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
-
-    - name: Set up Python Virtual Environment
-      run: |
-        python3 -m venv venv
-        source venv/bin/activate
-        echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
-        echo "PATH=$VIRTUAL_ENV/bin:$PATH" >> $GITHUB_ENV
-
-    - name: Install specific compatible versions
-      run: |
-        source venv/bin/activate
-        pip install "cython==0.29.33"
-        pip install "buildozer==1.5.0"
-        pip install "setuptools==65.5.0"
-
-    - name: Verify source files are accessible
-      run: |
-        source venv/bin/activate
-        echo "=== Ensuring source files are accessible ==="
-        # Check if main.py exists
-        if [ ! -f "main.py" ]; then
-          echo "ERROR: main.py not found in root directory!"
-          ls -la *.py || echo "No Python files found"
-          exit 1
-        fi
-        echo "main.py found successfully"
-        
-        # Check if data directory exists
-        if [ ! -d "data" ]; then
-          echo "ERROR: data/ directory not found!"
-          exit 1
-        fi
-        echo "data/ directory found"
-        
-        # Check if kv directory exists  
-        if [ ! -d "kv" ]; then
-          echo "ERROR: kv/ directory not found!"
-          exit 1
-        fi
-        echo "kv/ directory found"
-
-    - name: Clean previous build and initialize
-      run: |
-        source venv/bin/activate
-        echo "=== Cleaning previous build artifacts ==="
-        buildozer android clean || echo "Clean may have failed, continuing..."
-        
-        echo "=== Force re-initialization ==="
-        # Remove the .buildozer directory to start fresh
-        rm -rf .buildozer || echo "No .buildozer to remove"
-        
-        # Initialize with debug info
-        buildozer init || echo "Init may have warnings"
-
-    - name: Build the APK
-      run: |
-        source venv/bin/activate
-        echo "=== Starting the build process ==="
-        # Build with verbose output and longer timeout
-        timeout 7200 buildozer -v android debug 2>&1 | tee build.log || echo "Build completed or timed out"
-        
-        # Check if APK was created despite possible timeout
-        if [ -f "bin/*.apk" ]; then
-          echo "SUCCESS: APK file found!"
-          ls -la bin/
-        else
-          echo "Checking for APK in different locations..."
-          find . -name "*.apk" -type f 2>/dev/null | head -5 || echo "No APK files found yet"
-        fi
-
-    - name: Upload APK artifact
-      if: success()
-      uses: actions/upload-artifact@v4
-      with:
-        name: wordle-apk
-        path: bin/*.apk
-        if-no-files-found: warn
-
-    - name: Upload build logs for debugging
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: build-logs
-        path: |
-          build.log
-          .buildozer/
-        if-no-files-found: warn
+09-11T11:16:13.3982646Z [0m[1;31m#     GITHUB_ENV = '/home/runner/work/_temp/_runner_file_commands/set_env_8cc15767-9e72-435e-afd8-1884ec442868'[0m
+2025-09-11T11:16:13.3983617Z [0m[1;31m#     GITHUB_EVENT_PATH = '/home/runner/work/_temp/_github_workflow/event.json'[0m
+2025-09-11T11:16:13.3984339Z [0m[1;31m#     INVOCATION_ID = 'af2e0249479b42e98e529c71848a8d46'[0m
+2025-09-11T11:16:13.3984872Z [0m[1;31m#     GITHUB_EVENT_NAME = 'push'[0m
+2025-09-11T11:16:13.3985349Z [0m[1;31m#     GITHUB_RUN_ID = '17642353592'[0m
+2025-09-11T11:16:13.3985911Z [0m[1;31m#     JAVA_HOME_17_X64 = '/usr/lib/jvm/temurin-17-jdk-amd64'[0m
+2025-09-11T11:16:13.3986609Z [0m[1;31m#     ANDROID_NDK_HOME = '/usr/local/lib/android/sdk/ndk/27.3.13750724'[0m
+2025-09-11T11:16:13.3987632Z [0m[1;31m#     GITHUB_STEP_SUMMARY = '/home/runner/work/_temp/_runner_file_commands/step_summary_8cc15767-9e72-435e-afd8-1884ec442868'[0m
+2025-09-11T11:16:13.3988542Z [0m[1;31m#     HOMEBREW_NO_AUTO_UPDATE = '1'[0m
+2025-09-11T11:16:13.3989360Z [0m[1;31m#     GITHUB_ACTOR = 'JuergenKo'[0m
+2025-09-11T11:16:13.3989832Z [0m[1;31m#     NVM_DIR = '/home/runner/.nvm'[0m
+2025-09-11T11:16:13.3990271Z [0m[1;31m#     SGX_AESM_ADDR = '1'[0m
+2025-09-11T11:16:13.3990692Z [0m[1;31m#     GITHUB_RUN_ATTEMPT = '1'[0m
+2025-09-11T11:16:13.3991206Z [0m[1;31m#     ANDROID_HOME = '/usr/local/lib/android/sdk'[0m
+2025-09-11T11:16:13.3991844Z [0m[1;31m#     GITHUB_GRAPHQL_URL = 'https://api.github.com/graphql'[0m
+2025-09-11T11:16:13.3992512Z [0m[1;31m#     ACCEPT_EULA = 'Y'[0m
+2025-09-11T11:16:13.3992915Z [0m[1;31m#     USER = 'runner'[0m
+2025-09-11T11:16:13.3993395Z [0m[1;31m#     GITHUB_SERVER_URL = 'https://github.com'[0m
+2025-09-11T11:16:13.3993880Z [0m[1;31m#     PIPX_HOME = '/opt/pipx'[0m
+2025-09-11T11:16:13.3994426Z [0m[1;31m#     GECKOWEBDRIVER = '/usr/local/share/gecko_driver'[0m
+2025-09-11T11:16:13.3995230Z [0m[1;31m#     CHROMEWEBDRIVER = '/usr/local/share/chromedriver-linux64'[0m
+2025-09-11T11:16:13.3995787Z [0m[1;31m#     SHLVL = '0'[0m
+2025-09-11T11:16:13.3996266Z [0m[1;31m#     ANDROID_SDK_ROOT = '/usr/local/lib/android/sdk'[0m
+2025-09-11T11:16:13.3996880Z [0m[1;31m#     VCPKG_INSTALLATION_ROOT = '/usr/local/share/vcpkg'[0m
+2025-09-11T11:16:13.3997429Z [0m[1;31m#     GITHUB_ACTOR_ID = '141258472'[0m
+2025-09-11T11:16:13.3997959Z [0m[1;31m#     RUNNER_TOOL_CACHE = '/opt/hostedtoolcache'[0m
+2025-09-11T11:16:13.3998480Z [0m[1;31m#     ImageVersion = '20250907.50.1'[0m
+2025-09-11T11:16:13.3999169Z [0m[1;31m#     DOTNET_NOLOGO = '1'[0m
+2025-09-11T11:16:13.3999609Z [0m[1;31m#     VIRTUAL_ENV_PROMPT = '(venv) '[0m
+2025-09-11T11:16:13.4000176Z [0m[1;31m#     GOROOT_1_23_X64 = '/opt/hostedtoolcache/go/1.23.12/x64'[0m
+2025-09-11T11:16:13.4001027Z [0m[1;31m#     GITHUB_WORKFLOW_SHA = 'bc88decb50d0463e31c081f3b3c2bad7d43395f9'[0m
+2025-09-11T11:16:13.4001727Z [0m[1;31m#     GOROOT_1_24_X64 = '/opt/hostedtoolcache/go/1.24.7/x64'[0m
+2025-09-11T11:16:13.4002237Z [0m[1;31m#     GITHUB_REF_NAME = 'main'[0m
+2025-09-11T11:16:13.4002664Z [0m[1;31m#     GITHUB_JOB = 'build'[0m
+2025-09-11T11:16:13.4003100Z [0m[1;31m#     XDG_RUNTIME_DIR = '/run/user/1001'[0m
+2025-09-11T11:16:13.4003627Z [0m[1;31m#     AZURE_EXTENSION_DIR = '/opt/az/azcliextensions'[0m
+2025-09-11T11:16:13.4004113Z [0m[1;31m#     PS1 = '(venv) '[0m
+2025-09-11T11:16:13.4004551Z [0m[1;31m#     GITHUB_REPOSITORY = 'JuergenKo/wordle'[0m
+2025-09-11T11:16:13.4005060Z [0m[1;31m#     CHROME_BIN = '/usr/bin/google-chrome'[0m
+2025-09-11T11:16:13.4005681Z [0m[1;31m#     GOROOT_1_22_X64 = '/opt/hostedtoolcache/go/1.22.12/x64'[0m
+2025-09-11T11:16:13.4006344Z [0m[1;31m#     ANDROID_NDK_ROOT = '/usr/local/lib/android/sdk/ndk/27.3.13750724'[0m
+2025-09-11T11:16:13.4006956Z [0m[1;31m#     GITHUB_RETENTION_DAYS = '90'[0m
+2025-09-11T11:16:13.4007405Z [0m[1;31m#     JOURNAL_STREAM = '8:14380'[0m
+2025-09-11T11:16:13.4007914Z [0m[1;31m#     RUNNER_WORKSPACE = '/home/runner/work/wordle'[0m
+2025-09-11T11:16:13.4008422Z [0m[1;31m#     LEIN_HOME = '/usr/local/lib/lein'[0m
+2025-09-11T11:16:13.4009279Z [0m[1;31m#     LEIN_JAR = '/usr/local/lib/lein/self-installs/leiningen-2.11.2-standalone.jar'[0m
+2025-09-11T11:16:13.4009959Z [0m[1;31m#     GITHUB_ACTION_REPOSITORY = ''[0m
+2025-09-11T11:16:13.4012776Z [0m[1;31m#     PATH = '/home/runner/.buildozer/android/platform/apache-ant-1.9.4/bin:/home/runner/work/wordle/wordle/venv/bin:/home/runner/work/wordle/wordle/venv/bin:/home/runner/work/wordle/wordle/venv/bin:/snap/bin:/home/runner/.local/bin:/opt/pipx_bin:/home/runner/.cargo/bin:/home/runner/.config/composer/vendor/bin:/usr/local/.ghcup/bin:/home/runner/.dotnet/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin'[0m
+2025-09-11T11:16:13.4015239Z [0m[1;31m#     GITHUB_BASE_REF = ''[0m
+2025-09-11T11:16:13.4015725Z [0m[1;31m#     GHCUP_INSTALL_BASE_PREFIX = '/usr/local'[0m
+2025-09-11T11:16:13.4016170Z [0m[1;31m#     CI = 'true'[0m
+2025-09-11T11:16:13.4016600Z [0m[1;31m#     SWIFT_PATH = '/usr/share/swift/usr/bin'[0m
+2025-09-11T11:16:13.4017182Z [0m[1;31m#     ImageOS = 'ubuntu22'[0m
+2025-09-11T11:16:13.4017645Z [0m[1;31m#     GITHUB_REPOSITORY_OWNER = 'JuergenKo'[0m
+2025-09-11T11:16:13.4018078Z [0m[1;31m#     GITHUB_HEAD_REF = ''[0m
+2025-09-11T11:16:13.4018488Z [0m[1;31m#     GITHUB_ACTION_REF = ''[0m
+2025-09-11T11:16:13.4019114Z [0m[1;31m#     ENABLE_RUNNER_TRACING = 'true'[0m
+2025-09-11T11:16:13.4019728Z [0m[1;31m#     GITHUB_WORKFLOW = 'Build Android APK'[0m
+2025-09-11T11:16:13.4020253Z [0m[1;31m#     DEBIAN_FRONTEND = 'noninteractive'[0m
+2025-09-11T11:16:13.4021132Z [0m[1;31m#     GITHUB_OUTPUT = '/home/runner/work/_temp/_runner_file_commands/set_output_8cc15767-9e72-435e-afd8-1884ec442868'[0m
+2025-09-11T11:16:13.4022116Z [0m[1;31m#     AGENT_TOOLSDIRECTORY = '/opt/hostedtoolcache'[0m
+2025-09-11T11:16:13.4022794Z [0m[1;31m#     _ = '/usr/bin/timeout'[0m
+2025-09-11T11:16:13.4023380Z [0m[1;31m#     PACKAGES_PATH = '/home/runner/.buildozer/android/packages'[0m
+2025-09-11T11:16:13.4024143Z [0m[1;31m#     ANDROIDSDK = '/home/runner/.buildozer/android/platform/android-sdk'[0m
+2025-09-11T11:16:13.4024957Z [0m[1;31m#     ANDROIDNDK = '/home/runner/.buildozer/android/platform/android-ndk-r25b'[0m
+2025-09-11T11:16:13.4025544Z [0m[1;31m#     ANDROIDAPI = '31'[0m
+2025-09-11T11:16:13.4025935Z [0m[1;31m#     ANDROIDMINAPI = '21'[0m
+2025-09-11T11:16:13.4026302Z [0m[1;31m# [0m
+2025-09-11T11:16:13.4026691Z [0m[1;31m# Buildozer failed to execute the last command[0m
+2025-09-11T11:16:13.4027278Z [0m[1;31m# The error might be hidden in the log above this error[0m
+2025-09-11T11:16:13.4027922Z [0m[1;31m# Please read the full log, and search for it before[0m
+2025-09-11T11:16:13.4028485Z [0m[1;31m# raising an issue with buildozer itself.[0m
+2025-09-11T11:16:13.4029420Z [0m[1;31m# In case of a bug report, please add a full log with log_level = 2[0m
+2025-09-11T11:16:13.4255365Z Checking for APK in different locations...
