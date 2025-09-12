@@ -29,9 +29,10 @@ jobs:
         echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
         echo "PATH=$VIRTUAL_ENV/bin:$PATH" >> $GITHUB_ENV
 
-    - name: Install Buildozer
+    - name: Install Buildozer and Cython
       run: |
         source venv/bin/activate
+        pip install cython==0.29.33
         pip install buildozer
 
     - name: Build the APK
@@ -101,11 +102,6 @@ jobs:
           find "$EXTRACT_DIR/assets" -name "solutions.txt" -type f
         else
           echo "No assets directory found"
-        fi
-        
-        echo "=== res/ directory contents ==="
-        if [ -d "$EXTRACT_DIR/res" ]; then
-          find "$EXTRACT_DIR/res" -type f | head -10
         fi
 
     - name: Upload APK artifact
