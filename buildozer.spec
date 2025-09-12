@@ -136,7 +136,7 @@ android.theme = "@android:style/Theme.NoTitleBar.Fullscreen"
 
 # (str) Android additional directories to package
 # This is where you tell Buildozer to include your data and kv folders!
-android.add_dirs = data/, kv/
+# android.add_dirs = data/, kv/
 
 # (str) Android overwrite manifest (default is False)
 #android.manifest = False
