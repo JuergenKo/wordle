@@ -49,33 +49,70 @@ jobs:
         echo "=== JAVA_HOME ==="
         echo $JAVA_HOME
 
-    - name: Debug buildozer.spec configuration
+    - name: Debug and fix buildozer.spec
       run: |
         source venv/bin/activate
-        echo "=== buildozer.spec Configuration ==="
+        echo "=== Fixing buildozer.spec ==="
         
         if [ -f "buildozer.spec" ]; then
-          echo "--- Current buildozer.spec ---"
-          grep -E "(source\.|android\.|include|dir)" buildozer.spec || echo "No relevant settings found"
+          # Create backup
+          cp buildozer.spec buildozer.spec.backup
           
-          # Check for common issues
-          echo "--- Checking for common issues ---"
+          # Ensure android.add_dirs is correct (no backslashes)
           if grep -q "android.add_dirs" buildozer.spec; then
-            echo "✅ android.add_dirs is present"
-            grep "android.add_dirs" buildozer.spec
+            echo "Fixing android.add_dirs..."
+            sed -i '/^android\.add_dirs/ s/\\//g' buildozer.spec
+            sed -i '/^android\.add_dirs/ s/,$//' buildozer.spec
+            sed -i 's/^android\.add_dirs.*$/android.add_dirs = data\/, kv\//' buildozer.spec
           else
-            echo "❌ android.add_dirs is missing!"
+            echo "Adding missing android.add_dirs..."
+            echo "" >> buildozer.spec
+            echo "# Add data directories" >> buildozer.spec
+            echo "android.add_dirs = data/, kv/" >> buildozer.spec
           fi
           
+          # Ensure source.include_exts includes txt
           if grep -q "source.include_exts" buildozer.spec; then
-            echo "✅ source.include_exts is present"
-            grep "source.include_exts" buildozer.spec
+            echo "Ensuring txt files are included..."
+            sed -i '/^source\.include_exts/ s/\\//g' buildozer.spec
+            if ! grep -q "txt" buildozer.spec; then
+              sed -i '/^source\.include_exts/ s/$/,txt/' buildozer.spec
+            fi
           else
-            echo "❌ source.include_exts is missing!"
+            echo "Adding source.include_exts..."
+            echo "source.include_exts = py,png,jpg,kv,atlas,txt,json" >> buildozer.spec
           fi
+          
+          echo "=== Fixed buildozer.spec ==="
+          grep -E "(source\.|android\.|include|dir)" buildozer.spec
         else
           echo "❌ buildozer.spec not found!"
         fi
+
+    - name: Manually ensure data files are included
+      run: |
+        source venv/bin/activate
+        echo "=== Ensuring data files are available ==="
+        
+        # Create data directory if it doesn't exist
+        mkdir -p data
+        
+        # Create the files if they don't exist
+        if [ ! -f "data/solutions.txt" ]; then
+          echo "HELLO" > data/solutions.txt
+          echo "WORLD" >> data/solutions.txt
+          echo "TEST" >> data/solutions.txt
+          echo "WORDLE" >> data/solutions.txt
+        fi
+        
+        if [ ! -f "data/words_choose.txt" ]; then
+          echo "CHOOSE" > data/words_choose.txt
+          echo "WORDS" >> data/words_choose.txt
+          echo "HERE" >> data/words_choose.txt
+        fi
+        
+        echo "✅ Data files ready:"
+        ls -la data/
 
     - name: Build the APK with Java 17
       run: |
@@ -84,57 +121,10 @@ jobs:
         # Set JAVA_HOME explicitly for Buildozer
         JAVA_HOME=$JAVA_HOME buildozer -v android debug
 
-    - name: Manually copy data files to Android app
+    - name: Verify APK contents
       run: |
         source venv/bin/activate
-        echo "=== Manually copying data files ==="
-        
-        # Check if data directory exists in project
-        if [ -d "data" ]; then
-          echo "Copying data files to Android app directory..."
-          
-          # Create target directory if it doesn't exist
-          mkdir -p .buildozer/android/app/data
-          
-          # Copy all data files
-          cp -r data/* .buildozer/android/app/data/ 2>/dev/null || echo "Some files may not have copied"
-          
-          # Also copy individual text files from root if they exist
-          cp *.txt .buildozer/android/app/ 2>/dev/null || echo "No text files in root to copy"
-          
-          echo "✅ Data files copied manually"
-          echo "=== Android app directory after manual copy ==="
-          find .buildozer/android/app -name "*.txt" -type f | head -20
-        else
-          echo "❌ data/ directory not found in project"
-          echo "Creating dummy data files for testing..."
-          mkdir -p .buildozer/android/app/data
-          echo "TEST1" > .buildozer/android/app/data/solutions.txt
-          echo "TEST2" > .buildozer/android/app/data/words_choose.txt
-          echo "TEST3" > .buildozer/android/app/data/words.txt
-        fi
-
-    - name: Debug buildozer file processing
-      run: |
-        source venv/bin/activate
-        echo "=== Debugging Buildozer file processing ==="
-        
-        # Check what buildozer thinks it should include
-        echo "=== Buildozer source configuration ==="
-        buildozer android debug 2>&1 | grep -i "include\|source\|data" | head -20 || echo "No relevant output"
-        
-        # Check the actual .buildozer directory structure
-        echo "=== .buildozer directory structure ==="
-        find .buildozer -name "*.txt" -type f 2>/dev/null | head -10 || echo "No txt files in .buildozer"
-        
-        # Check if files made it to the android app directory
-        echo "=== Android app directory contents ==="
-        find .buildozer/android/app -name "*.txt" -type f 2>/dev/null | head -10 || echo "No txt files in android app"
-
-    - name: Quick APK content check
-      run: |
-        source venv/bin/activate
-        echo "=== Quick APK content check ==="
+        echo "=== Comprehensive APK Analysis ==="
         
         APK_FILE=$(find . -name "*.apk" -type f | head -1)
         if [ -z "$APK_FILE" ]; then
@@ -142,16 +132,27 @@ jobs:
           exit 0
         fi
         
-        # Check if solutions.txt is in the APK
-        echo "Checking for solutions.txt in APK..."
-        if unzip -l "$APK_FILE" | grep -q "solutions.txt"; then
-          echo "✅ solutions.txt is in the APK!"
-          # Show where it's located
-          unzip -l "$APK_FILE" | grep "solutions.txt"
+        echo "APK file: $APK_FILE"
+        
+        # Extract and analyze the APK
+        mkdir -p apk_analysis
+        unzip -q "$APK_FILE" -d apk_analysis
+        
+        echo "=== Full APK contents (looking for data files) ==="
+        find apk_analysis -name "*.txt" -type f
+        find apk_analysis -name "*solution*" -type f
+        find apk_analysis -name "*word*" -type f
+        
+        echo "=== assets/ directory contents ==="
+        if [ -d "apk_analysis/assets" ]; then
+          find apk_analysis/assets -type f
         else
-          echo "❌ solutions.txt is NOT in the APK!"
-          echo "All .txt files in APK:"
-          unzip -l "$APK_FILE" | grep "\.txt" || echo "No .txt files found"
+          echo "No assets directory found"
+        fi
+        
+        echo "=== res/ directory contents ==="
+        if [ -d "apk_analysis/res" ]; then
+          find apk_analysis/res -type f | head -10
         fi
 
     - name: Upload APK artifact
@@ -169,4 +170,12 @@ jobs:
         name: build-logs
         path: |
           .buildozer/
+        if-no-files-found: warn
+
+    - name: Upload APK analysis
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: apk-analysis
+        path: apk_analysis/
         if-no-files-found: warn
