@@ -79,6 +79,23 @@ jobs:
           unzip -l "$APK_FILE" | grep "\.txt" || echo "No .txt files found"
         fi
 
+    - name: Debug buildozer file processing
+      run: |
+        source venv/bin/activate
+        echo "=== Debugging Buildozer file processing ==="
+        
+        # Check what buildozer thinks it should include
+        echo "=== Buildozer source configuration ==="
+        buildozer android debug 2>&1 | grep -i "include\|source\|data" | head -20 || echo "No relevant output"
+        
+        # Check the actual .buildozer directory structure
+        echo "=== .buildozer directory structure ==="
+        find .buildozer -name "*.txt" -type f 2>/dev/null | head -10 || echo "No txt files in .buildozer"
+        
+        # Check if files made it to the android app directory
+        echo "=== Android app directory contents ==="
+        find .buildozer/android/app -name "*.txt" -type f 2>/dev/null | head -10 || echo "No txt files in android app"
+
     - name: Upload APK artifact
       if: success()
       uses: actions/upload-artifact@v4
@@ -95,20 +112,3 @@ jobs:
         path: |
           .buildozer/
         if-no-files-found: warn
-
-  - name: Debug buildozer file processing
-  run: |
-    source venv/bin/activate
-    echo "=== Debugging Buildozer file processing ==="
-    
-    # Check what buildozer thinks it should include
-    echo "=== Buildozer source configuration ==="
-    buildozer android debug 2>&1 | grep -i "include\|source\|data" | head -20 || echo "No relevant output"
-    
-    # Check the actual .buildozer directory structure
-    echo "=== .buildozer directory structure ==="
-    find .buildozer -name "*.txt" -type f 2>/dev/null | head -10 || echo "No txt files in .buildozer"
-    
-    # Check if files made it to the android app directory
-    echo "=== Android app directory contents ==="
-    find .buildozer/android/app -name "*.txt" -type f 2>/dev/null | head -10 || echo "No txt files in android app"
