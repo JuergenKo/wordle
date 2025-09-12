@@ -4,7 +4,7 @@ import sys
 import pkgutil
 import os 
 from kivy.config import Config
-
+from kivy.resources import resource_find
 
 # Set this BEFORE any other Kivy imports
 if sys.platform == 'android':
@@ -63,43 +63,25 @@ class WordleSolver:
     
 
 
+
     def load_words(self, filename):
-        """Simplified version for Android"""
+        """Simplified, cross-platform loader (works on desktop + Android)."""
+    
         try:
-            # Try multiple approaches
-            try:
-                # Desktop approach
-                if os.path.exists(filename):
-                    with open(filename, 'r') as f:
-                        return [line.strip().upper() for line in f if line.strip()]
-            except:
-                pass
+            # Use Kivy resource_find to locate the file inside APK or local FS
+            path = resource_find(filename)
+            if path and os.path.exists(path):
+                with open(path, "r", encoding="utf-8") as f:
+                    return [line.strip().upper() for line in f if line.strip()]
             
-            try:
-                # Android asset approach
-                from android import mActivity
-                from java.io import BufferedReader, InputStreamReader
-                
-                asset_manager = mActivity.getAssets()
-                input_stream = asset_manager.open(filename)
-                reader = BufferedReader(InputStreamReader(input_stream))
-                
-                words = []
-                line = reader.readLine()
-                while line is not None:
-                    words.append(line.strip().upper())
-                    line = reader.readLine()
-                
-                reader.close()
-                return words
-                
-            except:
-                # Fallback to embedded words
-                return 
-                
+            # If file wasn't found, fallback
+            print(f"⚠️ Resource not found: {filename}, using embedded fallback.")
+            return self.get_embedded_words(filename)
+    
         except Exception as e:
             print(f"⚠️ Could not load {filename}: {e}")
             return self.get_embedded_words(filename)
+
 
     
   
@@ -956,4 +938,3 @@ if __name__ == '__main__':
         Clock.schedule_once(lambda dt: setattr(Window, "fullscreen", "auto"), 1)
 
     WordleHelperApp().run()
-
