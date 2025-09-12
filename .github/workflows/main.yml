@@ -107,6 +107,31 @@ jobs:
           fi
         fi
 
+        
+# Add this step after the build
+- name: Quick APK content check
+  run: |
+    source venv/bin/activate
+    echo "=== Quick APK content check ==="
+    
+    APK_FILE=$(find . -name "*.apk" -type f | head -1)
+    if [ -z "$APK_FILE" ]; then
+      echo "No APK file found"
+      exit 1
+    fi
+    
+    # Check if solutions.txt is in the APK
+    echo "Checking for solutions.txt in APK..."
+    if unzip -l "$APK_FILE" | grep -q "solutions.txt"; then
+      echo "✅ solutions.txt is in the APK!"
+      # Show where it's located
+      unzip -l "$APK_FILE" | grep "solutions.txt"
+    else
+      echo "❌ solutions.txt is NOT in the APK!"
+      echo "All files in APK:"
+      unzip -l "$APK_FILE" | grep "\.txt" || echo "No .txt files found"
+    fi
+
     - name: Upload APK artifact if exists
       if: always()
       uses: actions/upload-artifact@v4
@@ -143,26 +168,3 @@ jobs:
         fi
 
 
-# Add this step after the build
-- name: Quick APK content check
-  run: |
-    source venv/bin/activate
-    echo "=== Quick APK content check ==="
-    
-    APK_FILE=$(find . -name "*.apk" -type f | head -1)
-    if [ -z "$APK_FILE" ]; then
-      echo "No APK file found"
-      exit 1
-    fi
-    
-    # Check if solutions.txt is in the APK
-    echo "Checking for solutions.txt in APK..."
-    if unzip -l "$APK_FILE" | grep -q "solutions.txt"; then
-      echo "✅ solutions.txt is in the APK!"
-      # Show where it's located
-      unzip -l "$APK_FILE" | grep "solutions.txt"
-    else
-      echo "❌ solutions.txt is NOT in the APK!"
-      echo "All files in APK:"
-      unzip -l "$APK_FILE" | grep "\.txt" || echo "No .txt files found"
-    fi
