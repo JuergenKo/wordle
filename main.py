@@ -1,6 +1,7 @@
 # Compiles ok with colab WordleApp_v14.ipynb  
 
 import sys
+import pkgutil
 import os 
 from kivy.config import Config
 
@@ -62,38 +63,16 @@ class WordleSolver:
     
 
 
-
     def load_words(self, filename):
         """Load words from a file, one word per line"""
+        file = resource_find(filename)
+        print("Resolved path:", file)
         try:
-            # Try multiple approaches to find the file
-            file_path = resource_find(filename)
-            
-            if file_path is None:
-                # On Android, files might be in the app directory
-                from android.storage import app_storage_path
-                app_dir = app_storage_path()
-                file_path = os.path.join(app_dir, filename)
-            
-            if file_path and os.path.exists(file_path):
-                with open(file_path, 'r') as f:
-                    return [line.strip().upper() for line in f if line.strip()]
-            else:
-                # Last resort: try to load from package data
-                import pkgutil
-                try:
-                    data = pkgutil.get_data(__name__, filename)
-                    if data:
-                        content = data.decode('utf-8')
-                        return [line.strip().upper() for line in content.split('\n') if line.strip()]
-                except:
-                    print(f"⚠️ Could not load {filename} from package data")
-                    return []
-                    
+            with open(file, 'r') as f:
+                return [line.strip().upper() for line in f if line.strip()]
         except Exception as e:
             print(f"⚠️ Could not load {filename}: {e}")
             return []
-
 
     
   
