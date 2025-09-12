@@ -95,7 +95,7 @@ class WordleSolver:
                 
             except:
                 # Fallback to embedded words
-                return self.get_embedded_words(filename)
+                return 
                 
         except Exception as e:
             print(f"⚠️ Could not load {filename}: {e}")
@@ -956,3 +956,4 @@ if __name__ == '__main__':
         Clock.schedule_once(lambda dt: setattr(Window, "fullscreen", "auto"), 1)
 
     WordleHelperApp().run()
+
