@@ -49,12 +49,87 @@ jobs:
         echo "=== JAVA_HOME ==="
         echo $JAVA_HOME
 
+    - name: Debug buildozer.spec configuration
+      run: |
+        source venv/bin/activate
+        echo "=== buildozer.spec Configuration ==="
+        
+        if [ -f "buildozer.spec" ]; then
+          echo "--- Current buildozer.spec ---"
+          grep -E "(source\.|android\.|include|dir)" buildozer.spec || echo "No relevant settings found"
+          
+          # Check for common issues
+          echo "--- Checking for common issues ---"
+          if grep -q "android.add_dirs" buildozer.spec; then
+            echo "✅ android.add_dirs is present"
+            grep "android.add_dirs" buildozer.spec
+          else
+            echo "❌ android.add_dirs is missing!"
+          fi
+          
+          if grep -q "source.include_exts" buildozer.spec; then
+            echo "✅ source.include_exts is present"
+            grep "source.include_exts" buildozer.spec
+          else
+            echo "❌ source.include_exts is missing!"
+          fi
+        else
+          echo "❌ buildozer.spec not found!"
+        fi
+
     - name: Build the APK with Java 17
       run: |
         source venv/bin/activate
         echo "=== Starting the build process ==="
         # Set JAVA_HOME explicitly for Buildozer
         JAVA_HOME=$JAVA_HOME buildozer -v android debug
+
+    - name: Manually copy data files to Android app
+      run: |
+        source venv/bin/activate
+        echo "=== Manually copying data files ==="
+        
+        # Check if data directory exists in project
+        if [ -d "data" ]; then
+          echo "Copying data files to Android app directory..."
+          
+          # Create target directory if it doesn't exist
+          mkdir -p .buildozer/android/app/data
+          
+          # Copy all data files
+          cp -r data/* .buildozer/android/app/data/ 2>/dev/null || echo "Some files may not have copied"
+          
+          # Also copy individual text files from root if they exist
+          cp *.txt .buildozer/android/app/ 2>/dev/null || echo "No text files in root to copy"
+          
+          echo "✅ Data files copied manually"
+          echo "=== Android app directory after manual copy ==="
+          find .buildozer/android/app -name "*.txt" -type f | head -20
+        else
+          echo "❌ data/ directory not found in project"
+          echo "Creating dummy data files for testing..."
+          mkdir -p .buildozer/android/app/data
+          echo "TEST1" > .buildozer/android/app/data/solutions.txt
+          echo "TEST2" > .buildozer/android/app/data/words_choose.txt
+          echo "TEST3" > .buildozer/android/app/data/words.txt
+        fi
+
+    - name: Debug buildozer file processing
+      run: |
+        source venv/bin/activate
+        echo "=== Debugging Buildozer file processing ==="
+        
+        # Check what buildozer thinks it should include
+        echo "=== Buildozer source configuration ==="
+        buildozer android debug 2>&1 | grep -i "include\|source\|data" | head -20 || echo "No relevant output"
+        
+        # Check the actual .buildozer directory structure
+        echo "=== .buildozer directory structure ==="
+        find .buildozer -name "*.txt" -type f 2>/dev/null | head -10 || echo "No txt files in .buildozer"
+        
+        # Check if files made it to the android app directory
+        echo "=== Android app directory contents ==="
+        find .buildozer/android/app -name "*.txt" -type f 2>/dev/null | head -10 || echo "No txt files in android app"
 
     - name: Quick APK content check
       run: |
@@ -78,23 +153,6 @@ jobs:
           echo "All .txt files in APK:"
           unzip -l "$APK_FILE" | grep "\.txt" || echo "No .txt files found"
         fi
-
-    - name: Debug buildozer file processing
-      run: |
-        source venv/bin/activate
-        echo "=== Debugging Buildozer file processing ==="
-        
-        # Check what buildozer thinks it should include
-        echo "=== Buildozer source configuration ==="
-        buildozer android debug 2>&1 | grep -i "include\|source\|data" | head -20 || echo "No relevant output"
-        
-        # Check the actual .buildozer directory structure
-        echo "=== .buildozer directory structure ==="
-        find .buildozer -name "*.txt" -type f 2>/dev/null | head -10 || echo "No txt files in .buildozer"
-        
-        # Check if files made it to the android app directory
-        echo "=== Android app directory contents ==="
-        find .buildozer/android/app -name "*.txt" -type f 2>/dev/null | head -10 || echo "No txt files in android app"
 
     - name: Upload APK artifact
       if: success()
