@@ -15,6 +15,14 @@ source.dir = .
 # (list) Source files to include (let empty to include all the files)
 # CRITICAL: This lists all file types your app uses. I've added txt, json, and kv.
 source.include_exts = py,png,jpg,jpeg,kv,atlas,txt,json,ttf
+# Explicitly include your data directories
+source.include_dirs = data, kv
+
+# For Android, explicitly add directories to package
+android.add_dirs = data/, kv/
+
+
+
 
 # (list) List of inclusions using pattern matching
 #source.include_patterns = assets/*,images/*.png
