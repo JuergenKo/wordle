@@ -64,15 +64,42 @@ class WordleSolver:
 
 
     def load_words(self, filename):
-        """Load words from a file, one word per line"""
-        file = resource_find(filename)
-        print("Resolved path:", file)
+        """Simplified version for Android"""
         try:
-            with open(file, 'r') as f:
-                return [line.strip().upper() for line in f if line.strip()]
+            # Try multiple approaches
+            try:
+                # Desktop approach
+                if os.path.exists(filename):
+                    with open(filename, 'r') as f:
+                        return [line.strip().upper() for line in f if line.strip()]
+            except:
+                pass
+            
+            try:
+                # Android asset approach
+                from android import mActivity
+                from java.io import BufferedReader, InputStreamReader
+                
+                asset_manager = mActivity.getAssets()
+                input_stream = asset_manager.open(filename)
+                reader = BufferedReader(InputStreamReader(input_stream))
+                
+                words = []
+                line = reader.readLine()
+                while line is not None:
+                    words.append(line.strip().upper())
+                    line = reader.readLine()
+                
+                reader.close()
+                return words
+                
+            except:
+                # Fallback to embedded words
+                return self.get_embedded_words(filename)
+                
         except Exception as e:
             print(f"⚠️ Could not load {filename}: {e}")
-            return []
+            return self.get_embedded_words(filename)
 
     
   
