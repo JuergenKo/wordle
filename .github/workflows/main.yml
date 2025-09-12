@@ -17,33 +17,10 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Debug - List repository files
-      run: |
-        echo "=== Repository Structure ==="
-        ls -la
-        echo "=== data/ directory ==="
-        ls -la data/ || echo "data/ directory does not exist"
-        echo "=== kv/ directory ==="
-        ls -la kv/ || echo "kv/ directory does not exist"
-
-    - name: Install Java 17 and system dependencies
+    - name: Install system dependencies
       run: |
         sudo apt-get update -y
-        # Install Java 17 instead of Java 11
-        sudo apt-get install -y openjdk-17-jdk
-        # Set Java 17 as default
-        sudo update-alternatives --set java /usr/lib/jvm/java-17-openjdk-amd64/bin/java
-        sudo update-alternatives --set javac /usr/lib/jvm/java-17-openjdk-amd64/bin/javac
-        # Install other dependencies
-        sudo apt-get install -y git zip unzip python3 python3-pip python3-venv python3-setuptools autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
-
-    - name: Verify Java version
-      run: |
-        echo "=== Java Version ==="
-        java -version
-        javac -version
-        echo "=== JAVA_HOME ==="
-        echo $JAVA_HOME
+        sudo apt-get install -y git zip unzip openjdk-17-jdk python3 python3-pip python3-venv python3-setuptools autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
 
     - name: Set up Python Virtual Environment
       run: |
@@ -52,119 +29,107 @@ jobs:
         echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
         echo "PATH=$VIRTUAL_ENV/bin:$PATH" >> $GITHUB_ENV
 
-    - name: Install specific compatible versions
+    - name: Install Buildozer
       run: |
         source venv/bin/activate
-        pip install "cython==0.29.33"
-        pip install "buildozer==1.5.0"
-        pip install "setuptools==65.5.0"
-
-    - name: Verify source files are accessible
-      run: |
-        source venv/bin/activate
-        echo "=== Ensuring source files are accessible ==="
-        if [ ! -f "main.py" ]; then
-          echo "ERROR: main.py not found in root directory!"
-          ls -la *.py || echo "No Python files found"
-          exit 1
-        fi
-        echo "main.py found successfully"
-        
-        if [ ! -d "data" ]; then
-          echo "ERROR: data/ directory not found!"
-          exit 1
-        fi
-        echo "data/ directory found"
-        
-        if [ ! -d "kv" ]; then
-          echo "ERROR: kv/ directory not found!"
-          exit 1
-        fi
-        echo "kv/ directory found"
+        pip install buildozer
 
     - name: Build the APK
       run: |
         source venv/bin/activate
         echo "=== Starting the build process ==="
+        buildozer -v android debug
+
+    - name: Verify APK contents
+      run: |
+        source venv/bin/activate
+        echo "=== Verifying APK contents ==="
         
-        # Clean previous build
-        buildozer android clean || echo "Clean may have failed, continuing..."
+        # Find the APK file
+        APK_FILE=$(find . -name "*.apk" -type f | head -1)
+        if [ -z "$APK_FILE" ]; then
+          echo "❌ No APK file found!"
+          exit 1
+        fi
         
-        # Build with Java 17 environment
-        JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 buildozer -v android debug 2>&1 | tee build.log || echo "Build completed or may have warnings"
+        echo "APK file: $APK_FILE"
         
-        # Check if APK was created
-        echo "=== Searching for APK files ==="
-        find . -name "*.apk" -type f 2>/dev/null | head -10 || echo "No APK files found in search"
+        # List all files in the APK
+        echo "=== Files in APK ==="
+        unzip -l "$APK_FILE" | head -20
         
-        # Check the bin directory
-        if [ -d "bin" ]; then
-          echo "=== Contents of bin/ directory ==="
-          ls -la bin/ || echo "bin directory exists but cannot list contents"
-          if ls bin/*.apk 1> /dev/null 2>&1; then
-            echo "SUCCESS: APK file found in bin/ directory!"
-            ls -la bin/*.apk
-          fi
+        # Check specifically for solutions.txt
+        echo "=== Checking for solutions.txt ==="
+        if unzip -l "$APK_FILE" | grep -q "solutions.txt"; then
+          echo "✅ solutions.txt is in the APK!"
+          unzip -l "$APK_FILE" | grep "solutions.txt"
+        else
+          echo "❌ solutions.txt is NOT in the APK!"
+          echo "Files containing 'txt':"
+          unzip -l "$APK_FILE" | grep "\.txt" || echo "No .txt files found"
+        fi
+        
+        # Check for other important files
+        echo "=== Checking for other data files ==="
+        unzip -l "$APK_FILE" | grep -E "(\.txt|\.json|\.kv|data/)" | head -10 || echo "No data files found"
+
+    - name: Extract and inspect assets from APK
+      run: |
+        source venv/bin/activate
+        echo "=== Extracting assets from APK for inspection ==="
+        
+        APK_FILE=$(find . -name "*.apk" -type f | head -1)
+        if [ -z "$APK_FILE" ]; then
+          echo "No APK file found for extraction"
+          exit 0
+        fi
+        
+        # Create temp directory for extraction
+        EXTRACT_DIR="apk_contents"
+        mkdir -p "$EXTRACT_DIR"
+        
+        # Extract the APK
+        unzip -q "$APK_FILE" -d "$EXTRACT_DIR"
+        
+        echo "=== APK structure ==="
+        find "$EXTRACT_DIR" -type f -name "*.txt" -o -name "*.json" -o -name "*.kv" | head -20
+        
+        echo "=== assets/ directory contents ==="
+        if [ -d "$EXTRACT_DIR/assets" ]; then
+          find "$EXTRACT_DIR/assets" -type f | head -20
+          echo "=== Checking for solutions.txt in assets ==="
+          find "$EXTRACT_DIR/assets" -name "solutions.txt" -type f
+        else
+          echo "No assets directory found"
+        fi
+        
+        echo "=== res/ directory contents ==="
+        if [ -d "$EXTRACT_DIR/res" ]; then
+          find "$EXTRACT_DIR/res" -type f | head -10
         fi
 
-        
-# Add this step after the build
-- name: Quick APK content check
-  run: |
-    source venv/bin/activate
-    echo "=== Quick APK content check ==="
-    
-    APK_FILE=$(find . -name "*.apk" -type f | head -1)
-    if [ -z "$APK_FILE" ]; then
-      echo "No APK file found"
-      exit 1
-    fi
-    
-    # Check if solutions.txt is in the APK
-    echo "Checking for solutions.txt in APK..."
-    if unzip -l "$APK_FILE" | grep -q "solutions.txt"; then
-      echo "✅ solutions.txt is in the APK!"
-      # Show where it's located
-      unzip -l "$APK_FILE" | grep "solutions.txt"
-    else
-      echo "❌ solutions.txt is NOT in the APK!"
-      echo "All files in APK:"
-      unzip -l "$APK_FILE" | grep "\.txt" || echo "No .txt files found"
-    fi
-
-    - name: Upload APK artifact if exists
-      if: always()
+    - name: Upload APK artifact
+      if: success()
       uses: actions/upload-artifact@v4
       with:
         name: wordle-apk
-        path: |
-          bin/*.apk
-          *.apk
-        if-no-files-found: ignore
+        path: bin/*.apk
+        if-no-files-found: warn
 
-    - name: Upload build logs for debugging
+    - name: Upload APK contents report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: apk-contents-report
+        path: |
+          apk_contents/
+        if-no-files-found: warn
+
+    - name: Upload build logs
       if: always()
       uses: actions/upload-artifact@v4
       with:
         name: build-logs
         path: |
-          build.log
           .buildozer/
         if-no-files-found: warn
-
-    - name: Check build status and provide summary
-      if: always()
-      run: |
-        echo "=== Build Status Summary ==="
-        if find . -name "*.apk" -type f 2>/dev/null | grep -q .; then
-          echo "✅ SUCCESS: APK file was created!"
-          echo "APK files found:"
-          find . -name "*.apk" -type f 2>/dev/null
-          exit 0
-        else
-          echo "❌ BUILD FAILED: No APK file was produced"
-          echo "Check the build.log for details."
-          exit 1
-        fi
-
-
