@@ -49,46 +49,35 @@ jobs:
         echo "=== JAVA_HOME ==="
         echo $JAVA_HOME
 
-    - name: Debug and fix buildozer.spec
-      run: |
-        source venv/bin/activate
-        echo "=== Fixing buildozer.spec ==="
-        
-        if [ -f "buildozer.spec" ]; then
-          # Create backup
-          cp buildozer.spec buildozer.spec.backup
-          
-          # Ensure android.add_dirs is correct (no backslashes)
-          if grep -q "android.add_dirs" buildozer.spec; then
-            echo "Fixing android.add_dirs..."
-            sed -i '/^android\.add_dirs/ s/\\//g' buildozer.spec
-            sed -i '/^android\.add_dirs/ s/,$//' buildozer.spec
-            sed -i 's/^android\.add_dirs.*$/android.add_dirs = data\/, kv\//' buildozer.spec
-          else
-            echo "Adding missing android.add_dirs..."
-            echo "" >> buildozer.spec
-            echo "# Add data directories" >> buildozer.spec
-            echo "android.add_dirs = data/, kv/" >> buildozer.spec
-          fi
-          
-          # Ensure source.include_exts includes txt
-          if grep -q "source.include_exts" buildozer.spec; then
-            echo "Ensuring txt files are included..."
-            sed -i '/^source\.include_exts/ s/\\//g' buildozer.spec
-            if ! grep -q "txt" buildozer.spec; then
-              sed -i '/^source\.include_exts/ s/$/,txt/' buildozer.spec
-            fi
-          else
-            echo "Adding source.include_exts..."
-            echo "source.include_exts = py,png,jpg,kv,atlas,txt,json" >> buildozer.spec
-          fi
-          
-          echo "=== Fixed buildozer.spec ==="
-          grep -E "(source\.|android\.|include|dir)" buildozer.spec
-        else
-          echo "❌ buildozer.spec not found!"
-        fi
+- name: Debug and fix buildozer.spec
+  run: |
+    source venv/bin/activate
+    echo "=== Fixing buildozer.spec ==="
 
+    if [ -f "buildozer.spec" ]; then
+      cp buildozer.spec buildozer.spec.backup
+
+      # Ensure txt/json files are included
+      if grep -q "^source.include_exts" buildozer.spec; then
+        if ! grep -q "txt" buildozer.spec; then
+          sed -i '/^source.include_exts/ s/$/,txt,json/' buildozer.spec
+        fi
+      else
+        echo "source.include_exts = py,png,jpg,kv,atlas,txt,json" >> buildozer.spec
+      fi
+
+      # Explicit patterns for safety
+      if ! grep -q "^source.include_patterns" buildozer.spec; then
+        echo "source.include_patterns = solutions.txt, words.txt, words_choose.txt, game_data.json" >> buildozer.spec
+      fi
+
+      echo "=== Fixed buildozer.spec ==="
+      grep -E "(source\.include|android\.add_dirs)" buildozer.spec
+    else
+      echo "❌ buildozer.spec not found!"
+    fi
+
+    
     - name: Manually ensure data files are included
       run: |
         source venv/bin/activate
