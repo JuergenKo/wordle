@@ -46,7 +46,7 @@ if sys.platform == 'win32':
 class WordleSolver:
     def __init__(self, guess_words_file="words_choose.txt", solution_words_file="solutions.txt"):
         print("Debug WordleSolver init")
-        print("Debug load solut")
+        print("Debug load solut",solution_words_file)
         self.solution_words = self.load_words(solution_words_file)
         self.guess_words = self.load_words(guess_words_file)
         self.guess_words = self.solution_words
@@ -62,38 +62,41 @@ class WordleSolver:
     
     
 
-    def load_words(self, filename):
+
+    def load_words(self,filename):
         """
-        Load words from assets/data on Android, or local FS on desktop.
+        Load words from text file.
+        - Desktop: looks in local FS or data/
+        - Android: loads from assets/data/ inside APK
         """
+        # --- Desktop / normal Python path ---
+        path = resource_find(filename) or resource_find(os.path.join("data", filename))
+        if path and os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                return [line.strip().upper() for line in f if line.strip()]
+    
+        # --- Android APK assets ---
         try:
-            # --- 1. Desktop or unpacked case ---
-            path = resource_find(filename) or resource_find(os.path.join("data", filename))
-            if path and os.path.exists(path):
-                with open(path, "r", encoding="utf-8") as f:
-                    return [line.strip().upper() for line in f if line.strip()]
+            from jnius import autoclass
+            PythonActivity = autoclass("org.kivy.android.PythonActivity")
+            asset_manager = PythonActivity.mActivity.getAssets()
     
-            # --- 2. Android direct assets access ---
-            if "ANDROID_ARGUMENT" in os.environ:
-                try:
-                    from jnius import autoclass
-                    PythonActivity = autoclass("org.kivy.android.PythonActivity")
-                    context = PythonActivity.mActivity
-                    asset_manager = context.getAssets()
-                    full_path = os.path.join("data", filename)
+            # Ensure we use "data/filename" because buildozer puts it in assets/data/
+            asset_path = filename if filename.startswith("data/") else os.path.join("data", filename)
+            input_stream = asset_manager.open(asset_path)
     
-                    with asset_manager.open(full_path) as stream:
-                        content = stream.read().decode("utf-8")
-                        return [line.strip().upper() for line in content.splitlines() if line.strip()]
-                except Exception as e:
-                    print(f"⚠️ Android asset load failed for {filename}: {e}")
+            size = input_stream.available()
+            buffer = bytearray(size)
+            input_stream.read(buffer)
+            input_stream.close()
     
-            raise FileNotFoundError(f"{filename} not found in APK assets or FS")
+            return [line.strip().upper() for line in buffer.decode("utf-8").splitlines() if line.strip()]
     
         except Exception as e:
             print(f"⚠️ Could not load {filename}: {e}")
             return []
     
+        
         
   
    
@@ -949,4 +952,3 @@ if __name__ == '__main__':
         Clock.schedule_once(lambda dt: setattr(Window, "fullscreen", "auto"), 1)
 
     WordleHelperApp().run()
-
