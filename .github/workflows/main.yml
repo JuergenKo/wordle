@@ -115,6 +115,7 @@ jobs:
         ls -la data/
 
     - name: Build the APK with Java 17
+      working-directory: ./
       run: |
         source venv/bin/activate
         echo "=== Starting the build process ==="
