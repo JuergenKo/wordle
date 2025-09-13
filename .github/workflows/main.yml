@@ -49,34 +49,34 @@ jobs:
         echo "=== JAVA_HOME ==="
         echo $JAVA_HOME
 
-  - name: Debug and fix buildozer.spec
-    run: |
-      source venv/bin/activate
-      echo "=== Fixing buildozer.spec ==="
-  
-      if [ -f "buildozer.spec" ]; then
-        cp buildozer.spec buildozer.spec.backup
-  
-        # Ensure txt/json files are included
-        if grep -q "^source.include_exts" buildozer.spec; then
-          if ! grep -q "txt" buildozer.spec; then
-            sed -i '/^source.include_exts/ s/$/,txt,json/' buildozer.spec
+    - name: Debug and fix buildozer.spec
+      run: |
+        source venv/bin/activate
+        echo "=== Fixing buildozer.spec ==="
+    
+        if [ -f "buildozer.spec" ]; then
+          cp buildozer.spec buildozer.spec.backup
+    
+          # Ensure txt/json files are included
+          if grep -q "^source.include_exts" buildozer.spec; then
+            if ! grep -q "txt" buildozer.spec; then
+              sed -i '/^source.include_exts/ s/$/,txt,json/' buildozer.spec
+            fi
+          else
+            echo "source.include_exts = py,png,jpg,kv,atlas,txt,json" >> buildozer.spec
           fi
+    
+          # Explicit patterns for safety
+          if ! grep -q "^source.include_patterns" buildozer.spec; then
+            echo "source.include_patterns = solutions.txt, words.txt, words_choose.txt, game_data.json" >> buildozer.spec
+          fi
+    
+          echo "=== Fixed buildozer.spec ==="
+          grep -E "(source\.include|android\.add_dirs)" buildozer.spec
         else
-          echo "source.include_exts = py,png,jpg,kv,atlas,txt,json" >> buildozer.spec
+          echo "❌ buildozer.spec not found!"
         fi
-  
-        # Explicit patterns for safety
-        if ! grep -q "^source.include_patterns" buildozer.spec; then
-          echo "source.include_patterns = solutions.txt, words.txt, words_choose.txt, game_data.json" >> buildozer.spec
-        fi
-  
-        echo "=== Fixed buildozer.spec ==="
-        grep -E "(source\.include|android\.add_dirs)" buildozer.spec
-      else
-        echo "❌ buildozer.spec not found!"
-      fi
-  
+    
     
     - name: Manually ensure data files are included
       run: |
