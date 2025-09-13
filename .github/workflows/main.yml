@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 jobs:
-  build:   # <-- this job name was missing
+  build:
     runs-on: ubuntu-22.04
 
     steps:
@@ -58,6 +58,7 @@ jobs:
         if [ -f "buildozer.spec" ]; then
           cp buildozer.spec buildozer.spec.backup
     
+          # Ensure txt/json files are included
           if grep -q "^source.include_exts" buildozer.spec; then
             if ! grep -q "txt" buildozer.spec; then
               sed -i '/^source.include_exts/ s/$/,txt,json/' buildozer.spec
@@ -66,6 +67,7 @@ jobs:
             echo "source.include_exts = py,png,jpg,kv,atlas,txt,json" >> buildozer.spec
           fi
     
+          # Explicit patterns for safety
           if ! grep -q "^source.include_patterns" buildozer.spec; then
             echo "source.include_patterns = solutions.txt, words.txt, words_choose.txt, game_data.json" >> buildozer.spec
           fi
@@ -75,17 +77,28 @@ jobs:
         else
           echo "❌ buildozer.spec not found!"
         fi
-
-    - name: Ensure data files exist
+    
+    - name: Manually ensure data files are included
       working-directory: ./wordle
       run: |
         source ../venv/bin/activate
+        echo "=== Ensuring data files are available ==="
+        
         mkdir -p data
-        echo "HELLO" > data/solutions.txt
-        echo "WORLD" >> data/solutions.txt
-        echo "WORDLE" >> data/solutions.txt
-        echo "CHOOSE" > data/words_choose.txt
-        echo "WORDS" >> data/words_choose.txt
+        
+        if [ ! -f "data/solutions.txt" ]; then
+          echo "HELLO" > data/solutions.txt
+          echo "WORLD" >> data/solutions.txt
+          echo "TEST" >> data/solutions.txt
+          echo "WORDLE" >> data/solutions.txt
+        fi
+        
+        if [ ! -f "data/words_choose.txt" ]; then
+          echo "CHOOSE" > data/words_choose.txt
+          echo "WORDS" >> data/words_choose.txt
+          echo "HERE" >> data/words_choose.txt
+        fi
+        
         echo "✅ Data files ready:"
         ls -la data/
 
@@ -100,18 +113,38 @@ jobs:
       working-directory: ./wordle
       run: |
         source ../venv/bin/activate
-        APK_FILE=$(find . -name "*.apk" -type f | head -1)
+        echo "=== Comprehensive APK Analysis ==="
+        
+        APK_FILE=$(find bin -name "*.apk" -type f | head -1)
         if [ -z "$APK_FILE" ]; then
           echo "No APK file found"
           exit 0
         fi
+        
         echo "APK file: $APK_FILE"
+        
         mkdir -p apk_analysis
         unzip -q "$APK_FILE" -d apk_analysis
+        
+        echo "=== Full APK contents (looking for data files) ==="
+        find apk_analysis -name "*.txt" -type f
+        find apk_analysis -name "*solution*" -type f
+        find apk_analysis -name "*word*" -type f
+        
         echo "=== assets/ directory contents ==="
-        find apk_analysis/assets -type f || echo "No assets directory found"
+        if [ -d "apk_analysis/assets" ]; then
+          find apk_analysis/assets -type f
+        else
+          echo "No assets directory found"
+        fi
+        
+        echo "=== res/ directory contents ==="
+        if [ -d "apk_analysis/res" ]; then
+          find apk_analysis/res -type f | head -10
+        fi
 
     - name: Upload APK artifact
+      if: success()
       uses: actions/upload-artifact@v4
       with:
         name: wordle-apk
