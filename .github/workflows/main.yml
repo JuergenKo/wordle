@@ -26,137 +26,87 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update -y
-        sudo apt-get install -y git zip unzip python3 python3-pip python3-venv python3-setuptools autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+        sudo apt-get install -y git zip unzip python3 python3-pip python3-venv \
+          python3-setuptools autoconf libtool pkg-config zlib1g-dev \
+          libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
 
-    - name: Set up Python Virtual Environment
+    - name: Set up Python virtual environment
       run: |
         python3 -m venv venv
-        source venv/bin/activate
-        echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
-        echo "PATH=$VIRTUAL_ENV/bin:$PATH" >> $GITHUB_ENV
+        echo "VIRTUAL_ENV=$PWD/venv" >> $GITHUB_ENV
+        echo "PATH=$PWD/venv/bin:$PATH" >> $GITHUB_ENV
 
     - name: Install Buildozer and Cython
       run: |
-        source venv/bin/activate
-        pip install cython==0.29.33
-        pip install buildozer
+        pip install --upgrade pip
+        pip install cython==0.29.33 buildozer
 
-    - name: Verify Java version
+    - name: Accept Android SDK licenses
       run: |
-        echo "=== Java Version ==="
-        java -version
-        javac -version
-        echo "=== JAVA_HOME ==="
-        echo $JAVA_HOME
+        yes | $HOME/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager --licenses || true
 
-    - name: Debug and fix buildozer.spec
+    - name: Ensure data files exist
       run: |
-        source venv/bin/activate
-        echo "=== Fixing buildozer.spec ==="
-    
-        if [ -f "buildozer.spec" ]; then
-          cp buildozer.spec buildozer.spec.backup
-    
-          # Ensure txt/json files are included
-          if grep -q "^source.include_exts" buildozer.spec; then
-            if ! grep -q "txt" buildozer.spec; then
-              sed -i '/^source.include_exts/ s/$/,txt,json/' buildozer.spec
-            fi
-          else
-            echo "source.include_exts = py,png,jpg,kv,atlas,txt,json" >> buildozer.spec
-          fi
-    
-          # Explicit patterns for safety
-          if ! grep -q "^source.include_patterns" buildozer.spec; then
-            echo "source.include_patterns = solutions.txt, words.txt, words_choose.txt, game_data.json" >> buildozer.spec
-          fi
-    
-          echo "=== Fixed buildozer.spec ==="
-          grep -E "(source\.include|android\.add_dirs)" buildozer.spec
-        else
-          echo "❌ buildozer.spec not found!"
-        fi
-    
-    - name: Manually ensure data files are included
-      run: |
-        source venv/bin/activate
-        echo "=== Ensuring data files are available ==="
-        
         mkdir -p data
-        
+        # solutions.txt
         if [ ! -f "data/solutions.txt" ]; then
           echo "HELLO" > data/solutions.txt
           echo "WORLD" >> data/solutions.txt
           echo "TEST" >> data/solutions.txt
           echo "WORDLE" >> data/solutions.txt
         fi
-        
+        # words_choose.txt
         if [ ! -f "data/words_choose.txt" ]; then
           echo "CHOOSE" > data/words_choose.txt
           echo "WORDS" >> data/words_choose.txt
           echo "HERE" >> data/words_choose.txt
         fi
-        
         echo "✅ Data files ready:"
         ls -la data/
 
-    - name: Build the APK with Java 17
+    - name: Patch buildozer.spec
       run: |
-        source venv/bin/activate
-        echo "=== Starting the build process ==="
-        JAVA_HOME=$JAVA_HOME buildozer -v android debug
+        if [ -f "buildozer.spec" ]; then
+          cp buildozer.spec buildozer.spec.backup
+          # Ensure data files are included
+          if ! grep -q "^source.include_patterns" buildozer.spec; then
+            echo "source.include_patterns = data/*.txt, data/*.json" >> buildozer.spec
+          fi
+          # Stable build-tools
+          sed -i '/^#android.build_tools_version/ s/^#//' buildozer.spec || true
+          echo "android.build_tools_version = 36.0.3" >> buildozer.spec
+          echo "android.accept_sdk_license = True" >> buildozer.spec
+        else
+          echo "❌ buildozer.spec not found!"
+        fi
+
+    - name: Build the APK
+      run: |
+        buildozer android debug
 
     - name: Verify APK contents
       run: |
-        source venv/bin/activate
-        echo "=== Comprehensive APK Analysis ==="
-        
-        APK_FILE=$(find bin -name "*.apk" -type f | head -1)
+        APK_FILE=$(find . -name "*.apk" -type f | head -1)
         if [ -z "$APK_FILE" ]; then
           echo "No APK file found"
           exit 0
         fi
-        
         echo "APK file: $APK_FILE"
-        
         mkdir -p apk_analysis
         unzip -q "$APK_FILE" -d apk_analysis
-        
-        echo "=== Full APK contents (looking for data files) ==="
-        find apk_analysis -name "*.txt" -type f
-        find apk_analysis -name "*solution*" -type f
-        find apk_analysis -name "*word*" -type f
-        
-        echo "=== assets/ directory contents ==="
-        if [ -d "apk_analysis/assets" ]; then
-          find apk_analysis/assets -type f
-        else
-          echo "No assets directory found"
-        fi
-        
-        echo "=== res/ directory contents ==="
-        if [ -d "apk_analysis/res" ]; then
-          find apk_analysis/res -type f | head -10
-        fi
+        echo "=== assets/ contents ==="
+        find apk_analysis/assets -type f
+        echo "=== txt files in APK ==="
+        find apk_analysis -name "*.txt"
 
     - name: Upload APK artifact
-      if: success()
       uses: actions/upload-artifact@v4
       with:
         name: wordle-apk
         path: bin/*.apk
         if-no-files-found: warn
 
-    - name: Upload build logs
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: build-logs
-        path: .buildozer/
-        if-no-files-found: warn
-
     - name: Upload APK analysis
-      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: apk-analysis
