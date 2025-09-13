@@ -104,7 +104,7 @@ jobs:
         ls -la data/
 
     - name: Build the APK with Java 17
-      working-directory: ./
+      working-directory: wordle
       run: |
         source venv/bin/activate
         echo "=== Starting the build process ==="
@@ -112,6 +112,7 @@ jobs:
         JAVA_HOME=$JAVA_HOME buildozer -v android debug
 
     - name: Verify APK contents
+      working-directory: wordle
       run: |
         source venv/bin/activate
         echo "=== Comprehensive APK Analysis ==="
@@ -146,6 +147,7 @@ jobs:
         fi
 
     - name: Upload APK artifact
+      working-directory: wordle
       if: success()
       uses: actions/upload-artifact@v4
       with:
@@ -154,6 +156,7 @@ jobs:
         if-no-files-found: warn
 
     - name: Upload build logs
+      working-directory: wordle
       if: always()
       uses: actions/upload-artifact@v4
       with:
