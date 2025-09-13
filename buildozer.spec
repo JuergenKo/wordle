@@ -15,6 +15,7 @@ source.include_dirs = data, kv
 # Explicit patterns for safety
 source.include_patterns = data/*.txt, data/*.json
 
+
 # Android specific
 android.api = 31
 android.minapi = 21
@@ -28,6 +29,7 @@ android.accept_sdk_license = True
 
 # Ensure data directories are packaged
 android.add_dirs = data/, kv/
+android.add_assets = data/
 
 # Optional: set app icon and presplash if you have them
 # icon.filename = %(source.dir)s/data/icon.png
