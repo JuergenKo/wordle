@@ -62,28 +62,31 @@ class WordleSolver:
     
     
 
-
-
-    def load_words(self, filename):
-        """Simplified, cross-platform loader (works on desktop + Android)."""
     
+    def load_words(self, filename):
+        """
+        Load words from a file (works on desktop + Android).
+        """
         try:
-            # Use Kivy resource_find to locate the file inside APK or local FS
+            # Try plain filename first
             path = resource_find(filename)
+            if not path:
+                # Try inside packaged data/ directory
+                path = resource_find(os.path.join("data", filename))
+    
             if path and os.path.exists(path):
                 with open(path, "r", encoding="utf-8") as f:
                     return [line.strip().upper() for line in f if line.strip()]
-            
-            # If file wasn't found, fallback
-            print(f"⚠️ Resource not found: {filename}, using embedded fallback.")
-            return self.get_embedded_words(filename)
+    
+            # If we got here: file not found
+            raise FileNotFoundError(f"{filename} not found in APK or local FS")
     
         except Exception as e:
             print(f"⚠️ Could not load {filename}: {e}")
-            return self.get_embedded_words(filename)
-
-
+            return []
     
+    
+        
   
    
     def update_from_feedback(self, guess, feedback):
