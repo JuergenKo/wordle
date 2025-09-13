@@ -62,29 +62,37 @@ class WordleSolver:
     
     
 
-    
     def load_words(self, filename):
         """
-        Load words from a file (works on desktop + Android).
+        Load words from assets/data on Android, or local FS on desktop.
         """
         try:
-            # Try plain filename first
-            path = resource_find(filename)
-            if not path:
-                # Try inside packaged data/ directory
-                path = resource_find(os.path.join("data", filename))
-    
+            # --- 1. Desktop or unpacked case ---
+            path = resource_find(filename) or resource_find(os.path.join("data", filename))
             if path and os.path.exists(path):
                 with open(path, "r", encoding="utf-8") as f:
                     return [line.strip().upper() for line in f if line.strip()]
     
-            # If we got here: file not found
-            raise FileNotFoundError(f"{filename} not found in APK or local FS")
+            # --- 2. Android direct assets access ---
+            if "ANDROID_ARGUMENT" in os.environ:
+                try:
+                    from jnius import autoclass
+                    PythonActivity = autoclass("org.kivy.android.PythonActivity")
+                    context = PythonActivity.mActivity
+                    asset_manager = context.getAssets()
+                    full_path = os.path.join("data", filename)
+    
+                    with asset_manager.open(full_path) as stream:
+                        content = stream.read().decode("utf-8")
+                        return [line.strip().upper() for line in content.splitlines() if line.strip()]
+                except Exception as e:
+                    print(f"⚠️ Android asset load failed for {filename}: {e}")
+    
+            raise FileNotFoundError(f"{filename} not found in APK assets or FS")
     
         except Exception as e:
             print(f"⚠️ Could not load {filename}: {e}")
             return []
-    
     
         
   
@@ -941,3 +949,4 @@ if __name__ == '__main__':
         Clock.schedule_once(lambda dt: setattr(Window, "fullscreen", "auto"), 1)
 
     WordleHelperApp().run()
+
