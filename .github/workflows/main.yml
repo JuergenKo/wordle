@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  :
     runs-on: ubuntu-22.04
 
     steps:
@@ -35,11 +35,11 @@ jobs:
         echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
         echo "PATH=$VIRTUAL_ENV/bin:$PATH" >> $GITHUB_ENV
 
-    - name: Install Buildozer and Cython
+    - name: Install ozer and Cython
       run: |
         source venv/bin/activate
         pip install cython==0.29.33
-        pip install buildozer
+        pip install ozer
 
     - name: Verify Java version
       run: |
@@ -49,18 +49,18 @@ jobs:
         echo "=== JAVA_HOME ==="
         echo $JAVA_HOME
 
-    - name: Debug and fix buildozer.spec
+    - name: Debug and fix ozer.spec
       run: |
         source venv/bin/activate
-        echo "=== Fixing buildozer.spec ==="
+        echo "=== Fixing ozer.spec ==="
     
-        if [ -f "buildozer.spec" ]; then
-          cp buildozer.spec buildozer.spec.backup
+        if [ -f "ozer.spec" ]; then
+          cp ozer.spec ozer.spec.backup
     
           # Ensure txt/json files are included
-          if grep -q "^source.include_exts" buildozer.spec; then
-            if ! grep -q "txt" buildozer.spec; then
-              sed -i '/^source.include_exts/ s/$/,txt,json/' buildozer.spec
+          if grep -q "^source.include_exts" ozer.spec; then
+            if ! grep -q "txt" ozer.spec; then
+              sed -i '/^source.include_exts/ s/$/,txt,json/' ozer.spec
             fi
           else
             echo "source.include_exts = py,png,jpg,kv,atlas,txt,json" >> buildozer.spec
@@ -104,7 +104,7 @@ jobs:
         ls -la data/
 
     - name: Build the APK with Java 17
-      working-directory: wordle
+      working-directory: ./wordle
       run: |
         source venv/bin/activate
         echo "=== Starting the build process ==="
