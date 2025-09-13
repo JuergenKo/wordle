@@ -92,4 +92,73 @@ jobs:
         fi
         
         if [ ! -f "data/words_choose.txt" ]; then
-          echo "CHOOSE"
+          echo "CHOOSE" > data/words_choose.txt
+          echo "WORDS" >> data/words_choose.txt
+          echo "HERE" >> data/words_choose.txt
+        fi
+        
+        echo "✅ Data files ready:"
+        ls -la data/
+
+    - name: Build the APK with Java 17
+      run: |
+        source venv/bin/activate
+        echo "=== Starting the build process ==="
+        JAVA_HOME=$JAVA_HOME buildozer -v android debug
+
+    - name: Verify APK contents
+      run: |
+        source venv/bin/activate
+        echo "=== Comprehensive APK Analysis ==="
+        
+        APK_FILE=$(find bin -name "*.apk" -type f | head -1)
+        if [ -z "$APK_FILE" ]; then
+          echo "No APK file found"
+          exit 0
+        fi
+        
+        echo "APK file: $APK_FILE"
+        
+        mkdir -p apk_analysis
+        unzip -q "$APK_FILE" -d apk_analysis
+        
+        echo "=== Full APK contents (looking for data files) ==="
+        find apk_analysis -name "*.txt" -type f
+        find apk_analysis -name "*solution*" -type f
+        find apk_analysis -name "*word*" -type f
+        
+        echo "=== assets/ directory contents ==="
+        if [ -d "apk_analysis/assets" ]; then
+          find apk_analysis/assets -type f
+        else
+          echo "No assets directory found"
+        fi
+        
+        echo "=== res/ directory contents ==="
+        if [ -d "apk_analysis/res" ]; then
+          find apk_analysis/res -type f | head -10
+        fi
+
+    - name: Upload APK artifact
+      if: success()
+      uses: actions/upload-artifact@v4
+      with:
+        name: wordle-apk
+        path: bin/*.apk
+        if-no-files-found: warn
+
+    - name: Upload build logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-logs
+        path: .buildozer/
+        if-no-files-found: warn
+
+    - name: Upload APK analysis
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: apk-analysis
+        path: apk_analysis/
+        if-no-files-found: warn
