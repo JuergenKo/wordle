@@ -23,6 +23,8 @@ android.private_storage = True
 android.entrypoint = org.kivy.android.PythonActivity
 android.apptheme = @android:style/Theme.NoTitleBar
 android.theme = "@android:style/Theme.NoTitleBar.Fullscreen"
+android.build_tools_version = 36.0.3
+android.accept_sdk_license = True
 
 # Ensure data directories are packaged
 android.add_dirs = data/, kv/
