@@ -68,11 +68,11 @@ jobs:
       run: |
         if [ -f "buildozer.spec" ]; then
           cp buildozer.spec buildozer.spec.backup
-          # Ensure data files are included
+          # Include data files in APK
           if ! grep -q "^source.include_patterns" buildozer.spec; then
             echo "source.include_patterns = data/*.txt, data/*.json" >> buildozer.spec
           fi
-          # Stable build-tools
+          # Use stable build-tools
           sed -i '/^#android.build_tools_version/ s/^#//' buildozer.spec || true
           echo "android.build_tools_version = 36.0.3" >> buildozer.spec
           echo "android.accept_sdk_license = True" >> buildozer.spec
