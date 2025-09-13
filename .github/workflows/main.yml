@@ -147,7 +147,6 @@ jobs:
         fi
 
     - name: Upload APK artifact
-      working-directory: wordle
       if: success()
       uses: actions/upload-artifact@v4
       with:
@@ -156,7 +155,6 @@ jobs:
         if-no-files-found: warn
 
     - name: Upload build logs
-      working-directory: wordle
       if: always()
       uses: actions/upload-artifact@v4
       with:
