@@ -6,7 +6,8 @@ package.name = wordle
 package.domain = org.juergenko
 source.dir = .
 version = 1.0
-requirements = python3,kivy
+
+requirements = python3,kivy,kivmob
 orientation = portrait
 
 # Include source and data files
@@ -14,6 +15,8 @@ source.include_exts = py,kv,txt,json,png,jpg,jpeg,atlas,ttf
 source.include_dirs = data, kv
 # Explicit patterns for safety
 source.include_patterns = data/*.txt, data/*.json
+
+android.permissions = INTERNET,ACCESS_NETWORK_STATE
 
 
 # Android specific
