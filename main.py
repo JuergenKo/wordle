@@ -1,25 +1,20 @@
-from kivy.app import App
-from kivy.uix.boxlayout import BoxLayout
 from kivmob import KivMob
+from kivy.app import App
+from kivy.uix.label import Label
 
-# Replace with your own AdMob App ID and Banner Unit ID
-ADMOB_APP_ID = "ca-app-pub-3940256099942544~3347511713"      # Test App ID
-BANNER_UNIT_ID = "ca-app-pub-3940256099942544/6300978111"    # Test Banner Unit ID
-
-class MainLayout(BoxLayout):
-    pass
-
-class BannerApp(App):
+class TestApp(App):
     def build(self):
-        # Initialize AdMob
-        self.ads = KivMob(ADMOB_APP_ID)
-        
-        # Load banner
-        self.ads.new_banner(BANNER_UNIT_ID, top_pos=False)  # bottom of screen
-        self.ads.request_banner()
-        self.ads.show_banner()
+        return Label(text="Hello Ads")
 
-        return MainLayout()
+    def on_start(self):
+        try:
+            self.ads = KivMob("ca-app-pub-3940256099942544~3347511713")  # Test App ID
+            self.ads.new_banner("ca-app-pub-3940256099942544/6300978111", top_pos=False)
+            self.ads.request_banner()
+            self.ads.show_banner()
+        except Exception as e:
+            import traceback
+            print("⚠️ AdMob init failed:", e)
+            traceback.print_exc()
 
-if __name__ == "__main__":
-    BannerApp().run()
+TestApp().run()
