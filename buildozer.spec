@@ -10,8 +10,6 @@ requirements = python3,kivy,kivmob
 android.permissions = INTERNET,ACCESS_NETWORK_STATE
 orientation = portrait
 
-# (list) Gradle dependencies
-android.gradle_dependencies = com.google.android.gms:play-services-ads:22.6.0
 
 # (list) Java .jar files to add
 android.add_jars = 
@@ -37,7 +35,11 @@ android.ndk = 25b
 # (safe choice, works with python-for-android)
 
 # Google Mobile Ads (AdMob) SDK
-android.gradle_dependencies = com.google.android.gms:play-services-ads:23.0.0
+# android.gradle_dependencies = com.google.android.gms:play-services-ads:23.0.0
+
+
+# (list) Gradle dependencies
+android.gradle_dependencies = com.google.android.gms:play-services-ads:22.6.0
 
 android.private_storage = True
 android.entrypoint = org.kivy.android.PythonActivity
