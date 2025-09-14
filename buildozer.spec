@@ -6,7 +6,9 @@ package.name = wordle
 package.domain = org.juergenko
 source.dir = .
 version = 1.0
-requirements = python3,kivy,kivmob
+
+requirements = python3,kivy,https://github.com/michaelstott/kivmob/archive/refs/heads/master.zip
+
 android.permissions = INTERNET,ACCESS_NETWORK_STATE
 android.meta_data = com.google.android.gms.ads.APPLICATION_ID=ca-app-pub-3940256099942544~3347511713
 
