@@ -10,6 +10,14 @@ requirements = python3,kivy,kivmob
 android.permissions = INTERNET,ACCESS_NETWORK_STATE
 orientation = portrait
 
+# (list) Gradle dependencies
+android.gradle_dependencies = com.google.android.gms:play-services-ads:22.6.0
+
+# (list) Java .jar files to add
+android.add_jars = 
+
+
+
 # Include source and data files
 source.include_exts = py,kv,txt,json,png,jpg,jpeg,atlas,ttf
 source.include_dirs = data, kv
