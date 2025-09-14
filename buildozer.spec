@@ -26,9 +26,19 @@ source.include_patterns = data/*.txt, data/*.json
 
 
 # Android specific
-android.api = 31
+
 android.minapi = 21
 android.ndk_api = 21
+
+# Force modern SDK versions
+android.compile_sdk = 34
+android.api = 34
+android.ndk = 25b   
+# (safe choice, works with python-for-android)
+
+# Google Mobile Ads (AdMob) SDK
+android.gradle_dependencies = com.google.android.gms:play-services-ads:23.0.0
+
 android.private_storage = True
 android.entrypoint = org.kivy.android.PythonActivity
 android.apptheme = @android:style/Theme.NoTitleBar
