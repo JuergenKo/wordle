@@ -89,12 +89,18 @@ jobs:
         
     - name: Patch KivMob for new Ads SDK
       run: |
-        KIVMOB_PATH=$(python -c "import site; print(site.getsitepackages()[0])")/kivmob.py
+        KIVMOB_PATH=$(find venv -type f -name "kivmob.py" | head -n 1)
         echo "Patching $KIVMOB_PATH"
-        # Fix MobileAds.initialize() call (remove app_id arg)
-        sed -i "s/MobileAds.initialize(activity, app_id)/MobileAds.initialize(activity)/" $KIVMOB_PATH
-        # Ensure _test_devices always exists
-        sed -i "s/self._test_devices = test_devices/self._test_devices = []/" $KIVMOB_PATH
+        if [ -f "$KIVMOB_PATH" ]; then
+          # Fix MobileAds.initialize() call (remove app_id arg)
+          sed -i "s/MobileAds.initialize(activity, app_id)/MobileAds.initialize(activity)/" $KIVMOB_PATH
+          # Ensure _test_devices always exists
+          sed -i "s/self._test_devices = test_devices/self._test_devices = []/" $KIVMOB_PATH
+        else
+          echo "❌ kivmob.py not found!"
+          exit 1
+        fi
+
 
     - name: Build the APK
       run: |
