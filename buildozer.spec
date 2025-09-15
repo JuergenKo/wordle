@@ -7,10 +7,11 @@ package.domain = org.juergenko
 source.dir = .
 version = 1.0
 
-requirements = python3,kivy,https://github.com/michaelstott/kivmob/archive/refs/heads/master.zip
 
+requirements = python3,kivy,https://github.com/openai-forks/kivmob/archive/refs/heads/modern-sdk.zip
 
-android.gradle_dependencies = com.google.android.gms:play-services-ads:22.6.0
+android.gradle_dependencies = com.google.android.gms:play-services-ads:23.0.0
+
 android.meta_data = com.google.android.gms.ads.APPLICATION_ID=ca-app-pub-3940256099942544~3347511713
 
 
