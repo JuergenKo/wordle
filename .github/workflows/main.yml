@@ -93,17 +93,19 @@ jobs:
 
     - name: Patch KivMob for new Ads SDK
       run: |
-        KIVMOB_PATH=$(find .buildozer -type f -name "kivmob.py" | head -n 1 || true)
+        # Locate the installed kivmob.py inside .buildozer
+        KIVMOB_PATH=$(find .buildozer -path "*/site-packages/kivmob.py" | head -n 1 || true)
         echo "Patching $KIVMOB_PATH"
         if [ -f "$KIVMOB_PATH" ]; then
           # Fix MobileAds.initialize() call (remove app_id arg)
-          sed -i "s/MobileAds.initialize(activity, app_id)/MobileAds.initialize(activity)/" "$KIVMOB_PATH"
+          sed -i "s/MobileAds.initialize(self._activity, self._app_id)/MobileAds.initialize(self._activity)/" "$KIVMOB_PATH"
           # Ensure _test_devices always exists
-          sed -i "s/self._test_devices = test_devices/self._test_devices = []/" "$KIVMOB_PATH"
+          sed -i "/def __init__(/a \        self._test_devices = []" "$KIVMOB_PATH"
         else
-          echo "❌ kivmob.py not found in .buildozer!"
+          echo "❌ kivmob.py not found in .buildozer site-packages!"
           exit 1
         fi
+
 
     - name: Final Build with Buildozer
       run: |
