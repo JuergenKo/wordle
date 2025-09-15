@@ -86,7 +86,11 @@ jobs:
         rm -rf .buildozer
         rm -rf bin
         rm -rf ~/.buildozer/android/platform/build-*
-        
+
+    - name: Build with Buildozer (prepare only)
+      run: |
+        buildozer android debug --no-compile
+
     - name: Patch KivMob for new Ads SDK
       run: |
         KIVMOB_PATH=$(find .buildozer -type f -name "kivmob.py" | head -n 1 || true)
@@ -96,18 +100,16 @@ jobs:
           sed -i "s/MobileAds.initialize(activity, app_id)/MobileAds.initialize(activity)/" "$KIVMOB_PATH"
           # Ensure _test_devices always exists
           sed -i "s/self._test_devices = test_devices/self._test_devices = []/" "$KIVMOB_PATH"
-          # Show patch result for debugging
-          grep -n "MobileAds.initialize" "$KIVMOB_PATH" || true
-          grep -n "_test_devices" "$KIVMOB_PATH" || true
         else
           echo "❌ kivmob.py not found in .buildozer!"
           exit 1
         fi
 
-    - name: Build the APK
+    - name: Final Build with Buildozer
       run: |
-        buildozer -v android debug
+        buildozer android debug
 
+        
     - name: Verify APK contents
       run: |
         APK_FILE=$(find . -name "*.apk" -type f | head -1)
