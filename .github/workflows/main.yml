@@ -80,9 +80,16 @@ jobs:
           echo "❌ buildozer.spec not found!"
         fi
 
+    - name: Clean buildozer caches
+      run: |
+        buildozer android clean || true
+        rm -rf .buildozer
+        rm -rf bin
+        rm -rf ~/.buildozer/android/platform/build-*
+
     - name: Build the APK
       run: |
-        buildozer android debug
+        buildozer -v android debug
 
     - name: Verify APK contents
       run: |
