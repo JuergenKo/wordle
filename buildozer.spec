@@ -8,7 +8,9 @@ source.dir = .
 version = 1.0
 
 
-requirements = python3,kivy,https://github.com/openai-forks/kivmob/archive/refs/heads/modern-sdk.zip
+
+requirements = python3,kivy,https://github.com/michaelstott/kivmob/archive/refs/heads/master.zip
+
 
 android.gradle_dependencies = com.google.android.gms:play-services-ads:23.0.0
 
