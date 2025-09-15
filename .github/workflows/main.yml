@@ -86,6 +86,15 @@ jobs:
         rm -rf .buildozer
         rm -rf bin
         rm -rf ~/.buildozer/android/platform/build-*
+        
+    - name: Patch KivMob for new Ads SDK
+      run: |
+        KIVMOB_PATH=$(python -c "import site; print(site.getsitepackages()[0])")/kivmob.py
+        echo "Patching $KIVMOB_PATH"
+        # Fix MobileAds.initialize() call (remove app_id arg)
+        sed -i "s/MobileAds.initialize(activity, app_id)/MobileAds.initialize(activity)/" $KIVMOB_PATH
+        # Ensure _test_devices always exists
+        sed -i "s/self._test_devices = test_devices/self._test_devices = []/" $KIVMOB_PATH
 
     - name: Build the APK
       run: |
